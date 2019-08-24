@@ -67,15 +67,31 @@ type Node struct {
 
 var tokens []Token
 
+func consume(op string) bool {
+	if tokens[0].str == op {
+		tokens = tokens[1:]
+		return true
+	}
+	return false
+}
+
+func expect(op string) {
+	if tokens[0].str == op {
+		tokens = tokens[1:]
+		return
+	}
+	fmt.Println(tokens)
+	fmt.Printf("[Error] expected %s but got %s\n", op, tokens[0].str)
+	os.Exit(1)
+}
+
 func expr() *Node {
 	node := mul()
 
 	for len(tokens) > 0 {
-		if tokens[0].str == "+" {
-			tokens = tokens[1:]
+		if consume("+") {
 			node = &Node{ND_ADD, node, mul(), -1}
-		} else if tokens[0].str == "-" {
-			tokens = tokens[1:]
+		} else if consume("-") {
 			node = &Node{ND_SUB, node, mul(), -1}
 		} else {
 			return node
@@ -88,11 +104,9 @@ func mul() *Node {
 	node := primary()
 
 	for len(tokens) > 0 {
-		if tokens[0].str == "*" {
-			tokens = tokens[1:]
+		if consume("*") {
 			node = &Node{ND_MUL, node, primary(), -1}
-		} else if tokens[0].str == "/" {
-			tokens = tokens[1:]
+		} else if consume("/") {
 			node = &Node{ND_DIV, node, primary(), -1}
 		} else {
 			return node
@@ -102,15 +116,9 @@ func mul() *Node {
 }
 
 func primary() *Node {
-	if tokens[0].str == "(" {
-		tokens = tokens[1:]
+	if consume("(") {
 		node := expr()
-		if tokens[0].str != ")" {
-			fmt.Println(tokens)
-			fmt.Printf("[Error] expected ) but got %s\n", tokens[0].str)
-			os.Exit(1)
-		}
-		tokens = tokens[1:]
+		expect(")")
 		return node
 	}
 
