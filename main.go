@@ -32,7 +32,15 @@ func tokenize() []Token {
 			in = in[1:]
 			continue
 		}
-		if strings.Contains("+-*/()", string(in[0])) {
+		if len(in) > 2 {
+                  if string(in[0:2]) == "==" || string(in[0:2]) == "!=" ||
+			string(in[0:2]) == "<=" || string(in[0:2]) == ">=" {
+			tokens = append(tokens, Token{TK_RESERVED, -1, string(in[0:2])})
+			in = in[2:]
+			continue
+                      }
+		}
+		if strings.Contains("+-*/()<>", string(in[0])) {
 			tokens = append(tokens, Token{TK_RESERVED, -1, string(in[0])})
 			in = in[1:]
 			continue
@@ -55,6 +63,10 @@ const (
 	ND_SUB        // -
 	ND_MUL        // *
 	ND_DIV        // /
+	ND_EQ         // ==
+	ND_NE         // !=
+	ND_LT         // <
+	ND_LE         // <=
 	ND_NUM        // Integer
 )
 
@@ -86,6 +98,44 @@ func expect(op string) {
 }
 
 func expr() *Node {
+	return equality()
+}
+
+func equality() *Node {
+	node := relational()
+
+	for len(tokens) > 0 {
+		if consume("==") {
+			node = &Node{ND_EQ, node, relational(), -1}
+		} else if consume("!=") {
+			node = &Node{ND_NE, node, relational(), -1}
+		} else {
+			return node
+		}
+	}
+	return node
+}
+
+func relational() *Node {
+	node := add()
+
+	for len(tokens) > 0 {
+		if consume("<") {
+			node = &Node{ND_LT, node, add(), -1}
+		} else if consume("<=") {
+			node = &Node{ND_LE, node, add(), -1}
+		} else if consume(">") {
+			node = &Node{ND_LT, add(), node, -1}
+		} else if consume(">=") {
+			node = &Node{ND_LE, add(), node, -1}
+		} else {
+			return node
+		}
+	}
+	return node
+}
+
+func add() *Node {
 	node := mul()
 
 	for len(tokens) > 0 {
@@ -171,6 +221,26 @@ func gen(node *Node) {
 	case ND_DIV:
 		fmt.Printf("  cqo\n")
 		fmt.Printf("  idiv rdi\n")
+	case ND_EQ:
+		fmt.Printf("  cmp rax, rdi\n")
+		fmt.Printf("  sete al\n")
+		fmt.Printf("  movzx rax, al\n")
+		break
+	case ND_NE:
+		fmt.Printf("  cmp rax, rdi\n")
+		fmt.Printf("  setne al\n")
+		fmt.Printf("  movzx rax, al\n")
+		break
+	case ND_LT:
+		fmt.Printf("  cmp rax, rdi\n")
+		fmt.Printf("  setl al\n")
+		fmt.Printf("  movzx rax, al\n")
+		break
+	case ND_LE:
+		fmt.Printf("  cmp rax, rdi\n")
+		fmt.Printf("  setle al\n")
+		fmt.Printf("  movzx rax, al\n")
+		break
 	default:
 		fmt.Println("[Error] Unexpected node:", node)
 		os.Exit(1)
