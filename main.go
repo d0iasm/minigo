@@ -101,18 +101,28 @@ func expr() *Node {
 }
 
 func mul() *Node {
-	node := primary()
+	node := unary()
 
 	for len(tokens) > 0 {
 		if consume("*") {
-			node = &Node{ND_MUL, node, primary(), -1}
+			node = &Node{ND_MUL, node, unary(), -1}
 		} else if consume("/") {
-			node = &Node{ND_DIV, node, primary(), -1}
+			node = &Node{ND_DIV, node, unary(), -1}
 		} else {
 			return node
 		}
 	}
 	return node
+}
+
+func unary() *Node {
+	if consume("+") {
+		return unary()
+	} else if consume("-") {
+		num := &Node{ND_NUM, nil, nil, 0}
+		return &Node{ND_SUB, num, unary(), -1} // -val = 0 - val
+	}
+	return primary()
 }
 
 func primary() *Node {
