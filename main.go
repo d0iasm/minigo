@@ -32,7 +32,7 @@ func tokenize() []Token {
 			in = in[1:]
 			continue
 		}
-		if strings.Contains("+-*/", string(in[0])) {
+		if strings.Contains("+-*/()", string(in[0])) {
 			tokens = append(tokens, Token{TK_RESERVED, -1, string(in[0])})
 			in = in[1:]
 			continue
@@ -87,7 +87,7 @@ func expr() *Node {
 func mul() *Node {
 	node := primary()
 
-	for len(tokens) > 0{
+	for len(tokens) > 0 {
 		if tokens[0].str == "*" {
 			tokens = tokens[1:]
 			node = &Node{ND_MUL, node, primary(), -1}
@@ -103,12 +103,14 @@ func mul() *Node {
 
 func primary() *Node {
 	if tokens[0].str == "(" {
+		tokens = tokens[1:]
 		node := expr()
 		if tokens[0].str != ")" {
 			fmt.Println(tokens)
 			fmt.Printf("[Error] expected ) but got %s\n", tokens[0].str)
 			os.Exit(1)
 		}
+		tokens = tokens[1:]
 		return node
 	}
 
@@ -124,7 +126,7 @@ func printNode(node *Node, dep int) {
 
 	printNode(node.lhs, dep+1)
 	printNode(node.rhs, dep+1)
-        fmt.Printf("dep: %d, kind: %d, val: %d\n", dep, node.kind, node.val)
+	fmt.Printf("dep: %d, kind: %d, val: %d\n", dep, node.kind, node.val)
 }
 
 // generator
@@ -188,7 +190,7 @@ func main() {
 	in = os.Args[1]
 
 	tokens = tokenize()
-        //fmt.Println(tokens)
+	//fmt.Println(tokens)
 	node := expr()
 	//printNode(node, 0)
 
