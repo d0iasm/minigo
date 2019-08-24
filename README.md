@@ -1,0 +1,2 @@
+# minigo
+Minimum Go compiler.
