@@ -52,14 +52,14 @@ func tokenize() []Token {
 			continue
 		}
 		if len(in) > 2 {
-                  if string(in[0:2]) == "==" || string(in[0:2]) == "!=" ||
-			string(in[0:2]) == "<=" || string(in[0:2]) == ">=" {
-			tokens = append(tokens, Token{TK_RESERVED, -1, string(in[0:2])})
-			in = in[2:]
-			continue
-                      }
+			if string(in[0:2]) == "==" || string(in[0:2]) == "!=" ||
+				string(in[0:2]) == "<=" || string(in[0:2]) == ">=" {
+				tokens = append(tokens, Token{TK_RESERVED, -1, string(in[0:2])})
+				in = in[2:]
+				continue
+			}
 		}
-		if strings.Contains("+-*/()<>", string(in[0])) {
+		if strings.Contains("+-*/()<>;", string(in[0])) {
 			tokens = append(tokens, Token{TK_RESERVED, -1, string(in[0])})
 			in = in[1:]
 			continue
@@ -72,4 +72,3 @@ func tokenize() []Token {
 	}
 	return tokens
 }
-

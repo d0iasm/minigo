@@ -17,9 +17,9 @@ func main() {
 
 	tokens = tokenize()
 	//fmt.Println(tokens)
-	node := expr()
+	nodes := program()
 	//printNode(node, 0)
 
-        codegen(node)
+	codegen(nodes)
 	return
 }

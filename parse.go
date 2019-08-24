@@ -44,6 +44,20 @@ func expect(op string) {
 	os.Exit(1)
 }
 
+func program() []*Node {
+	nodes := make([]*Node, 0)
+	for len(tokens) > 0 {
+		nodes = append(nodes, stmt())
+	}
+	return nodes
+}
+
+func stmt() *Node {
+	node := expr()
+	expect(";")
+	return node
+}
+
 func expr() *Node {
 	return equality()
 }
@@ -143,4 +157,3 @@ func printNode(node *Node, dep int) {
 	printNode(node.rhs, dep+1)
 	fmt.Printf("dep: %d, kind: %d, val: %d\n", dep, node.kind, node.val)
 }
-

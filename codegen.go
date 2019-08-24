@@ -54,13 +54,15 @@ func gen(node *Node) {
 	fmt.Printf("  push rax\n")
 }
 
-func codegen(node *Node) {
+func codegen(nodes []*Node) {
 	fmt.Printf(".intel_syntax noprefix\n")
 	fmt.Printf(".global _main\n")
 	fmt.Printf("_main:\n")
 
-	gen(node)
+	for _, n := range nodes {
+		gen(n)
+		fmt.Printf("  pop rax\n")
+	}
 
-	fmt.Printf("  pop rax\n")
 	fmt.Printf("  ret\n")
 }
