@@ -8,16 +8,17 @@ import (
 type NodeKind int
 
 const (
-	ND_ADD    = iota // +
-	ND_SUB           // -
-	ND_MUL           // *
-	ND_DIV           // /
-	ND_EQ            // ==
-	ND_NE            // !=
-	ND_LT            // <
-	ND_LE            // <=
-	ND_RETURN        // "return"
-	ND_NUM           // Integer
+	ND_ADD       = iota // +
+	ND_SUB              // -
+	ND_MUL              // *
+	ND_DIV              // /
+	ND_EQ               // ==
+	ND_NE               // !=
+	ND_LT               // <
+	ND_LE               // <=
+	ND_RETURN           // "return"
+	ND_EXPR_STMT        // Expression statement
+	ND_NUM              // Integer
 )
 
 type Node struct {
@@ -59,7 +60,7 @@ func stmt() *Node {
 		expect(";")
 		return node
 	}
-	node := expr()
+	node := &Node{ND_EXPR_STMT, expr(), nil, -1}
 	expect(";")
 	return node
 }

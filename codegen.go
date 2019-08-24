@@ -6,11 +6,16 @@ import (
 )
 
 func gen(node *Node) {
-	if node.kind == ND_NUM {
+	switch node.kind {
+	case ND_NUM:
 		fmt.Printf("  push %d\n", node.val)
 		return
-	} else if node.kind == ND_RETURN {
-		gen(node.lhs) // Use left-side child node for return statement.
+	case ND_EXPR_STMT:
+		gen(node.lhs)                // Use only left-side child node for expression statement.
+		fmt.Printf("  add rsp, 8\n") // Throw away the result of an expression.
+		return
+	case ND_RETURN:
+		gen(node.lhs) // Use only left-side child node for return statement.
 		fmt.Printf("  pop rax\n")
 		fmt.Printf("  ret\n")
 		return
@@ -62,7 +67,6 @@ func codegen(nodes []*Node) {
 
 	for _, n := range nodes {
 		gen(n)
-		fmt.Printf("  pop rax\n")
 	}
 
 	fmt.Printf("  ret\n")
