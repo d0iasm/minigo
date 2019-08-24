@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 var in string
+var userIn string
 
 type TokenKind int
 
@@ -18,7 +20,7 @@ const (
 type Token struct {
 	kind TokenKind
 	val  string
-        num int
+	num  int
 }
 
 func tokenize() []Token {
@@ -37,14 +39,14 @@ func tokenize() []Token {
 			tokens = append(tokens, Token{TK_NUM, "", toInt()})
 			continue
 		}
-		panic("Unexcected character: " + string(in[0]))
+		tokenError("Unexcected character:", string(in[0]))
 	}
 	return tokens
 }
 
 func isInt() bool {
 	_, err := strconv.Atoi(string(in[0]))
-        return err == nil
+	return err == nil
 }
 
 func toInt() int {
@@ -56,19 +58,28 @@ func toInt() int {
 	return n
 }
 
+func tokenError(f string, vars ...string) {
+	n := len(userIn) - len(in)
+	fmt.Println(userIn)
+	fmt.Println(strings.Repeat(" ", n) + "^")
+	fmt.Println("[Parse Error]", f, vars)
+	os.Exit(1)
+}
+
 func main() {
 	if len(os.Args) != 2 {
 		panic("Invalid number of command line arguments.")
 	}
+	userIn = os.Args[1]
 	in = os.Args[1]
 
 	tokens := tokenize()
+	fmt.Println(tokens)
 
 	fmt.Printf(".intel_syntax noprefix\n")
 	fmt.Printf(".global _main\n")
 	fmt.Printf("_main:\n")
 	fmt.Printf("  mov rax, %d\n", tokens[0].num)
-	tokens = tokens[1:]
 	for len(tokens) > 0 {
 		switch tokens[0].val {
 		case "+":
@@ -78,7 +89,9 @@ func main() {
 			fmt.Printf("  sub rax, %d\n", tokens[1].num)
 			tokens = tokens[2:]
 		default:
-			panic("Unexcected character: " + tokens[0].val)
+			fmt.Println(tokens)
+			fmt.Println("[Error] Unexpected token:", tokens[0])
+			os.Exit(1)
 		}
 	}
 	fmt.Printf("  ret\n")
