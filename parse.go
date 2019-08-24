@@ -8,15 +8,16 @@ import (
 type NodeKind int
 
 const (
-	ND_ADD = iota // +
-	ND_SUB        // -
-	ND_MUL        // *
-	ND_DIV        // /
-	ND_EQ         // ==
-	ND_NE         // !=
-	ND_LT         // <
-	ND_LE         // <=
-	ND_NUM        // Integer
+	ND_ADD    = iota // +
+	ND_SUB           // -
+	ND_MUL           // *
+	ND_DIV           // /
+	ND_EQ            // ==
+	ND_NE            // !=
+	ND_LT            // <
+	ND_LE            // <=
+	ND_RETURN        // "return"
+	ND_NUM           // Integer
 )
 
 type Node struct {
@@ -53,6 +54,11 @@ func program() []*Node {
 }
 
 func stmt() *Node {
+	if consume("return") {
+		node := &Node{ND_RETURN, expr(), nil, -1}
+		expect(";")
+		return node
+	}
 	node := expr()
 	expect(";")
 	return node

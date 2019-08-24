@@ -9,6 +9,11 @@ func gen(node *Node) {
 	if node.kind == ND_NUM {
 		fmt.Printf("  push %d\n", node.val)
 		return
+	} else if node.kind == ND_RETURN {
+		gen(node.lhs) // Use left-side child node for return statement.
+		fmt.Printf("  pop rax\n")
+		fmt.Printf("  ret\n")
+		return
 	}
 
 	gen(node.lhs)
@@ -31,22 +36,18 @@ func gen(node *Node) {
 		fmt.Printf("  cmp rax, rdi\n")
 		fmt.Printf("  sete al\n")
 		fmt.Printf("  movzx rax, al\n")
-		break
 	case ND_NE:
 		fmt.Printf("  cmp rax, rdi\n")
 		fmt.Printf("  setne al\n")
 		fmt.Printf("  movzx rax, al\n")
-		break
 	case ND_LT:
 		fmt.Printf("  cmp rax, rdi\n")
 		fmt.Printf("  setl al\n")
 		fmt.Printf("  movzx rax, al\n")
-		break
 	case ND_LE:
 		fmt.Printf("  cmp rax, rdi\n")
 		fmt.Printf("  setle al\n")
 		fmt.Printf("  movzx rax, al\n")
-		break
 	default:
 		fmt.Println("[Error] Unexpected node:", node)
 		os.Exit(1)

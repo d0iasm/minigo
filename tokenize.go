@@ -31,7 +31,7 @@ func tokenError(f string, vars ...string) {
 }
 
 func isInt() bool {
-	_, err := strconv.Atoi(string(in[0]))
+	_, err := strconv.Atoi(in[0:1])
 	return err == nil
 }
 
@@ -51,16 +51,23 @@ func tokenize() []Token {
 			in = in[1:]
 			continue
 		}
+		if len(in) > 6 {
+			if in[0:6] == "return" {
+				tokens = append(tokens, Token{TK_RESERVED, -1, in[0:6]})
+				in = in[6:]
+				continue
+			}
+		}
 		if len(in) > 2 {
-			if string(in[0:2]) == "==" || string(in[0:2]) == "!=" ||
-				string(in[0:2]) == "<=" || string(in[0:2]) == ">=" {
-				tokens = append(tokens, Token{TK_RESERVED, -1, string(in[0:2])})
+			if in[0:2] == "==" || in[0:2] == "!=" ||
+				in[0:2] == "<=" || in[0:2] == ">=" {
+				tokens = append(tokens, Token{TK_RESERVED, -1, in[0:2]})
 				in = in[2:]
 				continue
 			}
 		}
-		if strings.Contains("+-*/()<>;", string(in[0])) {
-			tokens = append(tokens, Token{TK_RESERVED, -1, string(in[0])})
+		if strings.Contains("+-*/()<>;", in[0:1]) {
+			tokens = append(tokens, Token{TK_RESERVED, -1, in[0:1]})
 			in = in[1:]
 			continue
 		}
@@ -68,7 +75,7 @@ func tokenize() []Token {
 			tokens = append(tokens, Token{TK_NUM, toInt(), ""})
 			continue
 		}
-		tokenError("Unexcected character:", string(in[0]))
+		tokenError("Unexcected character:", in[0:1])
 	}
 	return tokens
 }
