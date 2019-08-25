@@ -49,6 +49,12 @@ func isAlpha() bool {
 	return ('a' <= in[0] && in[0] <= 'z') || ('A' <= in[0] && in[0] <= 'Z')
 }
 
+func startsReserved() bool {
+	// TODO
+	//kws := {"return", "if", "else"}
+	return true
+}
+
 func tokenize() []Token {
 	tokens := make([]Token, 0)
 	for len(in) > 0 {

@@ -7,34 +7,23 @@ import (
 
 var locals []*Var
 
-type NodeKind int
+type Function struct {
+	nodes     []interface{}
+	locals    []*Var
+	stackSize int
+}
 
-const (
-	ND_ADD       = iota // +
-	ND_SUB              // -
-	ND_MUL              // *
-	ND_DIV              // /
-	ND_EQ               // ==
-	ND_NE               // !=
-	ND_LT               // <
-	ND_LE               // <=
-	ND_ASSIGN           // =
-	ND_RETURN           // "return"
-	ND_BLOCK            // { ... }
-	ND_EXPR_STMT        // Expression statements
-	ND_VAR              // Local variables
-	ND_NUM              // Integer literals
-)
+type Binary struct {
+	lhs interface{}
+	rhs interface{}
+}
 
-type Node struct {
-	kind NodeKind
-	lhs  *Node
-	rhs  *Node
+type Unary struct {
+	child interface{}
+}
 
-	body []*Node // Used if kind == ND_BLOCK
-
-	val  int  // Used if kind == ND_NUM, otherwise -1
-	varp *Var // Used if kind == ND_VAR, otherwise nil
+type Block struct {
+	children []interface{}
 }
 
 type Var struct {
@@ -42,23 +31,18 @@ type Var struct {
 	offset int    // Offset from RBP
 }
 
-type Function struct {
-	nodes     []*Node
-	locals    []*Var
-	stackSize int
-}
+type Add Binary
+type Sub Binary
+type Mul Binary
+type Div Binary
+type Eq Binary
+type Ne Binary
+type Lt Binary
+type Le Binary
+type Assign Binary
 
-func newNode(k NodeKind, l *Node, r *Node) *Node {
-	return &Node{k, l, r, nil, -1, &Var{"", 0}}
-}
-
-func newNumNode(k NodeKind, v int) *Node {
-	return &Node{k, nil, nil, nil, v, &Var{"", 0}}
-}
-
-func newVarNode(v *Var) *Node {
-	return &Node{ND_VAR, nil, nil, nil, -1, v}
-}
+type Return Unary
+type ExprStmt Unary
 
 func findVar(tok Token) *Var {
 	for _, v := range locals {
@@ -88,7 +72,7 @@ func expect(op string) {
 }
 
 func program() []Function {
-	nodes := make([]*Node, 0)
+	nodes := make([]interface{}, 0)
 	for len(tokens) > 0 {
 		nodes = append(nodes, stmt())
 	}
@@ -98,47 +82,45 @@ func program() []Function {
 	return funcs
 }
 
-func stmt() *Node {
+func stmt() interface{} {
 	if consume("return") {
-		node := newNode(ND_RETURN, expr(), nil)
+		node := Return{expr()}
 		expect(";")
 		return node
 	}
 
 	if consume("{") {
-		stmts := make([]*Node, 0)
+		stmts := make([]interface{}, 0)
 		for !consume("}") {
 			stmts = append(stmts, stmt())
 		}
-		node := newNode(ND_BLOCK, nil, nil)
-		node.body = stmts
-		return node
+		return Block{stmts}
 	}
-	node := newNode(ND_EXPR_STMT, expr(), nil)
+	node := ExprStmt{expr()}
 	expect(";")
 	return node
 }
 
-func expr() *Node {
+func expr() interface{} {
 	return assign()
 }
 
-func assign() *Node {
+func assign() interface{} {
 	node := equality()
 	if consume("=") {
-		node = newNode(ND_ASSIGN, node, assign())
+		node = Assign{node, assign()}
 	}
 	return node
 }
 
-func equality() *Node {
+func equality() interface{} {
 	node := relational()
 
 	for len(tokens) > 0 {
 		if consume("==") {
-			node = newNode(ND_EQ, node, relational())
+			node = Eq{node, relational()}
 		} else if consume("!=") {
-			node = newNode(ND_NE, node, relational())
+			node = Ne{node, relational()}
 		} else {
 			return node
 		}
@@ -146,18 +128,18 @@ func equality() *Node {
 	return node
 }
 
-func relational() *Node {
+func relational() interface{} {
 	node := add()
 
 	for len(tokens) > 0 {
 		if consume("<") {
-			node = newNode(ND_LT, node, add())
+			node = Lt{node, add()}
 		} else if consume("<=") {
-			node = newNode(ND_LE, node, add())
+			node = Le{node, add()}
 		} else if consume(">") {
-			node = newNode(ND_LT, add(), node)
+			node = Lt{add(), node}
 		} else if consume(">=") {
-			node = newNode(ND_LE, add(), node)
+			node = Le{add(), node}
 		} else {
 			return node
 		}
@@ -165,14 +147,14 @@ func relational() *Node {
 	return node
 }
 
-func add() *Node {
+func add() interface{} {
 	node := mul()
 
 	for len(tokens) > 0 {
 		if consume("+") {
-			node = newNode(ND_ADD, node, mul())
+			node = Add{node, mul()}
 		} else if consume("-") {
-			node = newNode(ND_SUB, node, mul())
+			node = Sub{node, mul()}
 		} else {
 			return node
 		}
@@ -180,14 +162,14 @@ func add() *Node {
 	return node
 }
 
-func mul() *Node {
+func mul() interface{} {
 	node := unary()
 
 	for len(tokens) > 0 {
 		if consume("*") {
-			node = newNode(ND_MUL, node, unary())
+			node = Mul{node, unary()}
 		} else if consume("/") {
-			node = newNode(ND_DIV, node, unary())
+			node = Div{node, unary()}
 		} else {
 			return node
 		}
@@ -195,16 +177,16 @@ func mul() *Node {
 	return node
 }
 
-func unary() *Node {
+func unary() interface{} {
 	if consume("+") {
 		return unary()
 	} else if consume("-") {
-		return newNode(ND_SUB, newNumNode(ND_NUM, 0), unary()) // -val = 0 - val
+		return Sub{0, unary()} // -val = 0 - val
 	}
 	return primary()
 }
 
-func primary() *Node {
+func primary() interface{} {
 	if consume("(") {
 		node := expr()
 		expect(")")
@@ -218,33 +200,44 @@ func primary() *Node {
 			varp = &Var{tokens[0].str, 0}
 			locals = append(locals, varp)
 		}
-		n := newVarNode(varp)
 		tokens = tokens[1:]
-		return n
+		return *varp
 	}
 
 	// Integer literals
-	n := newNumNode(ND_NUM, tokens[0].val)
+	n := tokens[0].val
 	tokens = tokens[1:]
 	return n
 }
 
-func printNodes(nodes []*Node) {
+func printNodes(nodes []interface{}) {
 	for i, n := range nodes {
 		fmt.Println("[Print Node] node:", i)
 		printNode(n, 0)
 	}
 }
 
-func printNode(node *Node, dep int) {
+func printNode(node interface{}, dep int) {
 	if node == nil {
 		return
 	}
 
-	for _, n := range node.body {
-		printNode(n, dep)
+	switch n := node.(type) {
+	case int:
+		fmt.Printf("INT dep: %d, val: %d\n", dep, n)
+	case Var:
+		fmt.Printf("VAR dep: %d, name: %s, offset: %d\n", dep, n.name, n.offset)
+	case Block:
+		fmt.Printf("BLOCK dep: %d\n", dep)
+		for _, c := range n.children {
+			printNode(c, dep)
+		}
+	case Unary:
+		fmt.Printf("UNARY dep: %d\n", dep)
+		printNode(n.child, dep+1)
+	case Binary:
+		fmt.Printf("BINARY dep: %d\n", dep)
+		printNode(n.lhs, dep+1)
+		printNode(n.rhs, dep+1)
 	}
-	printNode(node.lhs, dep+1)
-	printNode(node.rhs, dep+1)
-	fmt.Printf("dep: %d, kind: %d, val: %d, name: %s\n", dep, node.kind, node.val, node.varp.name)
 }

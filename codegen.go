@@ -5,9 +5,11 @@ import (
 	"os"
 )
 
-func genAddr(node *Node) {
-	if node.kind == ND_VAR {
-		fmt.Printf("  lea rax, [rbp-%d]\n", node.varp.offset)
+var labelseq int = 1
+
+func genAddr(node interface{}) {
+	if n, ok := node.(Var); ok {
+		fmt.Printf("  lea rax, [rbp-%d]\n", n.offset)
 		fmt.Printf("  push rax\n")
 		return
 	}
@@ -27,70 +29,104 @@ func store() {
 	fmt.Printf("  push rdi\n")
 }
 
-func gen(node *Node) {
-	switch node.kind {
-	case ND_NUM:
-		fmt.Printf("  push %d\n", node.val)
+func gen(node interface{}) {
+	switch n := node.(type) {
+	case int:
+		fmt.Printf("  push %d\n", n)
 		return
-	case ND_EXPR_STMT:
-		gen(node.lhs)                // Use only left-side child node for expression statement.
+	case ExprStmt:
+		gen(n.child)
 		fmt.Printf("  add rsp, 8\n") // Throw away the result of an expression.
 		return
-	case ND_VAR:
-		genAddr(node)
+	case Var:
+		genAddr(n)
 		load()
 		return
-	case ND_ASSIGN:
-		genAddr(node.lhs)
-		gen(node.rhs)
+	case Assign:
+		genAddr(n.lhs)
+		gen(n.rhs)
 		store()
 		return
-	case ND_BLOCK:
-		for _, n := range node.body {
-			gen(n)
+	case Block:
+		for _, c := range n.children {
+			gen(c)
 		}
 		return
-	case ND_RETURN:
-		gen(node.lhs) // Use only left-side child node for return statement.
+	//case If:
+	//seq := labelseq
+	//labelseq++
+	case Return:
+		gen(n.child)
 		fmt.Printf("  pop rax\n")
 		fmt.Printf("  jmp .Lreturn\n")
 		return
-	}
+	case Add:
+		gen(n.lhs)
+		gen(n.rhs)
+		fmt.Printf("  pop rdi\n")
+		fmt.Printf("  pop rax\n")
 
-	gen(node.lhs)
-	gen(node.rhs)
-
-	fmt.Printf("  pop rdi\n")
-	fmt.Printf("  pop rax\n")
-
-	switch node.kind {
-	case ND_ADD:
 		fmt.Printf("  add rax, rdi\n")
-	case ND_SUB:
+	case Sub:
+		gen(n.lhs)
+		gen(n.rhs)
+		fmt.Printf("  pop rdi\n")
+		fmt.Printf("  pop rax\n")
+
 		fmt.Printf("  sub rax, rdi\n")
-	case ND_MUL:
+	case Mul:
+		gen(n.lhs)
+		gen(n.rhs)
+		fmt.Printf("  pop rdi\n")
+		fmt.Printf("  pop rax\n")
+
 		fmt.Printf("  imul rax, rdi\n")
-	case ND_DIV:
+	case Div:
+		gen(n.lhs)
+		gen(n.rhs)
+		fmt.Printf("  pop rdi\n")
+		fmt.Printf("  pop rax\n")
+
 		fmt.Printf("  cqo\n")
 		fmt.Printf("  idiv rdi\n")
-	case ND_EQ:
+	case Eq:
+		gen(n.lhs)
+		gen(n.rhs)
+		fmt.Printf("  pop rdi\n")
+		fmt.Printf("  pop rax\n")
+
 		fmt.Printf("  cmp rax, rdi\n")
 		fmt.Printf("  sete al\n")
 		fmt.Printf("  movzx rax, al\n")
-	case ND_NE:
+	case Ne:
+		gen(n.lhs)
+		gen(n.rhs)
+		fmt.Printf("  pop rdi\n")
+		fmt.Printf("  pop rax\n")
+
 		fmt.Printf("  cmp rax, rdi\n")
 		fmt.Printf("  setne al\n")
 		fmt.Printf("  movzx rax, al\n")
-	case ND_LT:
+	case Lt:
+		gen(n.lhs)
+		gen(n.rhs)
+		fmt.Printf("  pop rdi\n")
+		fmt.Printf("  pop rax\n")
+
 		fmt.Printf("  cmp rax, rdi\n")
 		fmt.Printf("  setl al\n")
 		fmt.Printf("  movzx rax, al\n")
-	case ND_LE:
+	case Le:
+		gen(n.lhs)
+		gen(n.rhs)
+		fmt.Printf("  pop rdi\n")
+		fmt.Printf("  pop rax\n")
+
 		fmt.Printf("  cmp rax, rdi\n")
 		fmt.Printf("  setle al\n")
 		fmt.Printf("  movzx rax, al\n")
 	default:
-		fmt.Println("[Error] Unexpected node:", node)
+		fmt.Println("[Error] Unexpected node:", n)
 		os.Exit(1)
 	}
 	fmt.Printf("  push rax\n")
