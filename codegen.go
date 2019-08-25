@@ -45,6 +45,11 @@ func gen(node *Node) {
 		gen(node.rhs)
 		store()
 		return
+	case ND_BLOCK:
+		for _, n := range node.body {
+			gen(n)
+		}
+		return
 	case ND_RETURN:
 		gen(node.lhs) // Use only left-side child node for return statement.
 		fmt.Printf("  pop rax\n")

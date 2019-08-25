@@ -70,4 +70,9 @@ assert 8 'a=3; z=5; return a+z;'
 assert 3 'foo=3; return foo;'
 assert 8 'foo123=3; bar=5; return foo123+bar;'
 
+echo
+echo 'blocks'
+echo
+assert 3 '{1; {2;} return 3;}'
+
 echo OK

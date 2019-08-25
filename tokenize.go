@@ -71,7 +71,7 @@ func tokenize() []Token {
 				continue
 			}
 		}
-		if strings.Contains("+-*/()<>;=", in[0:1]) {
+		if strings.Contains("+-*/()<>;={}", in[0:1]) {
 			tokens = append(tokens, Token{TK_RESERVED, -1, in[0:1]})
 			in = in[1:]
 			continue

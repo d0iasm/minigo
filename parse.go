@@ -20,6 +20,7 @@ const (
 	ND_LE               // <=
 	ND_ASSIGN           // =
 	ND_RETURN           // "return"
+	ND_BLOCK            // { ... }
 	ND_EXPR_STMT        // Expression statements
 	ND_VAR              // Local variables
 	ND_NUM              // Integer literals
@@ -29,6 +30,9 @@ type Node struct {
 	kind NodeKind
 	lhs  *Node
 	rhs  *Node
+
+	body []*Node // Used if kind == ND_BLOCK
+
 	val  int  // Used if kind == ND_NUM, otherwise -1
 	varp *Var // Used if kind == ND_VAR, otherwise nil
 }
@@ -45,15 +49,15 @@ type Function struct {
 }
 
 func newNode(k NodeKind, l *Node, r *Node) *Node {
-	return &Node{k, l, r, -1, &Var{"", 0}}
+	return &Node{k, l, r, nil, -1, &Var{"", 0}}
 }
 
 func newNumNode(k NodeKind, v int) *Node {
-	return &Node{k, nil, nil, v, &Var{"", 0}}
+	return &Node{k, nil, nil, nil, v, &Var{"", 0}}
 }
 
 func newVarNode(v *Var) *Node {
-	return &Node{ND_VAR, nil, nil, -1, v}
+	return &Node{ND_VAR, nil, nil, nil, -1, v}
 }
 
 func findVar(tok Token) *Var {
@@ -98,6 +102,16 @@ func stmt() *Node {
 	if consume("return") {
 		node := newNode(ND_RETURN, expr(), nil)
 		expect(";")
+		return node
+	}
+
+	if consume("{") {
+		stmts := make([]*Node, 0)
+		for !consume("}") {
+			stmts = append(stmts, stmt())
+		}
+		node := newNode(ND_BLOCK, nil, nil)
+		node.body = stmts
 		return node
 	}
 	node := newNode(ND_EXPR_STMT, expr(), nil)
@@ -227,7 +241,10 @@ func printNode(node *Node, dep int) {
 		return
 	}
 
+	for _, n := range node.body {
+		printNode(n, dep)
+	}
 	printNode(node.lhs, dep+1)
 	printNode(node.rhs, dep+1)
-	fmt.Printf("dep: %d, kind: %d, val: %d, name %s\n", dep, node.kind, node.val, node.varp.name)
+	fmt.Printf("dep: %d, kind: %d, val: %d, name: %s\n", dep, node.kind, node.val, node.varp.name)
 }
