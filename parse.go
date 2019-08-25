@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 )
 
 var locals []Var
@@ -41,6 +40,13 @@ type Block struct {
 	children []Stmt
 }
 
+type If struct {
+	// init Stmt // TODO: implement
+	cond Expr
+	then Stmt
+	els  Stmt
+}
+
 type Var struct {
 	name   string // Variable name
 	offset int    // Offset from RBP
@@ -58,6 +64,7 @@ func (Assign) isStmt()   {}
 func (Return) isStmt()   {}
 func (ExprStmt) isStmt() {}
 func (Block) isStmt()    {}
+func (If) isStmt()       {}
 
 func findVar(tok Token) *Var {
 	for _, v := range locals {
@@ -69,7 +76,7 @@ func findVar(tok Token) *Var {
 }
 
 func consume(op string) bool {
-	if tokens[0].str == op {
+	if len(tokens) != 0 && tokens[0].str == op {
 		tokens = tokens[1:]
 		return true
 	}
@@ -77,13 +84,11 @@ func consume(op string) bool {
 }
 
 func expect(op string) {
-	if tokens[0].str == op {
+	if len(tokens) != 0 && tokens[0].str == op {
 		tokens = tokens[1:]
 		return
 	}
-	fmt.Println(tokens)
-	fmt.Printf("[Error] expected %s but got %s\n", op, tokens[0].str)
-	os.Exit(1)
+	panic(fmt.Sprintf("%s \n [Error] expected %s but got %s\n", tokens, op, tokens[0].str))
 }
 
 func program() []Function {
@@ -113,6 +118,26 @@ func stmt() Stmt {
 			stmts = append(stmts, stmt())
 		}
 		return Block{stmts}
+	}
+
+	// If statement.
+	if consume("if") {
+		cond := expr()
+		then := Stmt(nil)
+		if tokens[0].str == "{" {
+			then = stmt()
+		} else {
+			expect("{")
+		}
+		els := Stmt(nil)
+		if consume("else") {
+			if tokens[0].str == "if" || tokens[0].str == "{" {
+				els = stmt()
+			} else {
+				expect("{")
+			}
+		}
+		return If{cond, then, els}
 	}
 
 	// Assignment statement.
