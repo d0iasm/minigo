@@ -12,8 +12,9 @@ var tokens []Token
 type TokenKind int
 
 const (
-	TK_RESERVED = iota
-	TK_NUM
+	TK_RESERVED = iota // Keywords or punctuators
+	TK_IDENT           // Identifiers
+	TK_NUM             // Integer literals
 )
 
 type Token struct {
@@ -66,8 +67,13 @@ func tokenize() []Token {
 				continue
 			}
 		}
-		if strings.Contains("+-*/()<>;", in[0:1]) {
+		if strings.Contains("+-*/()<>;=", in[0:1]) {
 			tokens = append(tokens, Token{TK_RESERVED, -1, in[0:1]})
+			in = in[1:]
+			continue
+		}
+		if 'a' <= in[0] && in[0] <= 'z' {
+			tokens = append(tokens, Token{TK_IDENT, -1, in[0:1]})
 			in = in[1:]
 			continue
 		}

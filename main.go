@@ -18,7 +18,9 @@ func main() {
 	tokens = tokenize()
 	//fmt.Println(tokens)
 	nodes := program()
-	//printNode(node, 0)
+	//printNode(nodes[0], 0)
+	//fmt.Println("========")
+	//printNode(nodes[1], 0)
 
 	codegen(nodes)
 	return

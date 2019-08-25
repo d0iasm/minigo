@@ -16,16 +16,31 @@ const (
 	ND_NE               // !=
 	ND_LT               // <
 	ND_LE               // <=
+	ND_ASSIGN           // =
 	ND_RETURN           // "return"
-	ND_EXPR_STMT        // Expression statement
-	ND_NUM              // Integer
+	ND_EXPR_STMT        // Expression statements
+	ND_LVAR             // Local variables
+	ND_NUM              // Integer literals
 )
 
 type Node struct {
 	kind NodeKind
 	lhs  *Node
 	rhs  *Node
-	val  int
+	val  int    // Used if kind == ND_NUM, otherwise -1
+	name string // Used if kind == ND_LVAR, otherwise empty
+}
+
+func newNode(k NodeKind, l *Node, r *Node) *Node {
+	return &Node{k, l, r, -1, ""}
+}
+
+func newNumNode(k NodeKind, v int) *Node {
+	return &Node{k, nil, nil, v, ""}
+}
+
+func newVarNode(n string) *Node {
+	return &Node{ND_LVAR, nil, nil, -1, n}
 }
 
 func consume(op string) bool {
@@ -56,17 +71,25 @@ func program() []*Node {
 
 func stmt() *Node {
 	if consume("return") {
-		node := &Node{ND_RETURN, expr(), nil, -1}
+		node := newNode(ND_RETURN, expr(), nil)
 		expect(";")
 		return node
 	}
-	node := &Node{ND_EXPR_STMT, expr(), nil, -1}
+	node := newNode(ND_EXPR_STMT, expr(), nil)
 	expect(";")
 	return node
 }
 
 func expr() *Node {
-	return equality()
+	return assign()
+}
+
+func assign() *Node {
+	node := equality()
+	if consume("=") {
+		node = newNode(ND_ASSIGN, node, assign())
+	}
+	return node
 }
 
 func equality() *Node {
@@ -74,9 +97,9 @@ func equality() *Node {
 
 	for len(tokens) > 0 {
 		if consume("==") {
-			node = &Node{ND_EQ, node, relational(), -1}
+			node = newNode(ND_EQ, node, relational())
 		} else if consume("!=") {
-			node = &Node{ND_NE, node, relational(), -1}
+			node = newNode(ND_NE, node, relational())
 		} else {
 			return node
 		}
@@ -89,13 +112,13 @@ func relational() *Node {
 
 	for len(tokens) > 0 {
 		if consume("<") {
-			node = &Node{ND_LT, node, add(), -1}
+			node = newNode(ND_LT, node, add())
 		} else if consume("<=") {
-			node = &Node{ND_LE, node, add(), -1}
+			node = newNode(ND_LE, node, add())
 		} else if consume(">") {
-			node = &Node{ND_LT, add(), node, -1}
+			node = newNode(ND_LT, add(), node)
 		} else if consume(">=") {
-			node = &Node{ND_LE, add(), node, -1}
+			node = newNode(ND_LE, add(), node)
 		} else {
 			return node
 		}
@@ -108,9 +131,9 @@ func add() *Node {
 
 	for len(tokens) > 0 {
 		if consume("+") {
-			node = &Node{ND_ADD, node, mul(), -1}
+			node = newNode(ND_ADD, node, mul())
 		} else if consume("-") {
-			node = &Node{ND_SUB, node, mul(), -1}
+			node = newNode(ND_SUB, node, mul())
 		} else {
 			return node
 		}
@@ -123,9 +146,9 @@ func mul() *Node {
 
 	for len(tokens) > 0 {
 		if consume("*") {
-			node = &Node{ND_MUL, node, unary(), -1}
+			node = newNode(ND_MUL, node, unary())
 		} else if consume("/") {
-			node = &Node{ND_DIV, node, unary(), -1}
+			node = newNode(ND_DIV, node, unary())
 		} else {
 			return node
 		}
@@ -137,8 +160,7 @@ func unary() *Node {
 	if consume("+") {
 		return unary()
 	} else if consume("-") {
-		num := &Node{ND_NUM, nil, nil, 0}
-		return &Node{ND_SUB, num, unary(), -1} // -val = 0 - val
+		return newNode(ND_SUB, newNumNode(ND_NUM, 0), unary()) // -val = 0 - val
 	}
 	return primary()
 }
@@ -150,9 +172,17 @@ func primary() *Node {
 		return node
 	}
 
-	n := Node{ND_NUM, nil, nil, tokens[0].val}
+	// identifiers.
+	if tokens[0].kind == TK_IDENT {
+		n := newVarNode(tokens[0].str)
+		tokens = tokens[1:]
+		return n
+	}
+
+	// integer literals.
+	n := newNumNode(ND_NUM, tokens[0].val)
 	tokens = tokens[1:]
-	return &n
+	return n
 }
 
 func printNode(node *Node, dep int) {
@@ -162,5 +192,5 @@ func printNode(node *Node, dep int) {
 
 	printNode(node.lhs, dep+1)
 	printNode(node.rhs, dep+1)
-	fmt.Printf("dep: %d, kind: %d, val: %d\n", dep, node.kind, node.val)
+	fmt.Printf("dep: %d, kind: %d, val: %d, name %s\n", dep, node.kind, node.val, node.name)
 }

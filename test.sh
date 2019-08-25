@@ -4,7 +4,7 @@ assert() {
 
   go build main.go tokenize.go parse.go codegen.go
   ./main "$input" > tmp.s
-  gcc -o tmp tmp.s
+  gcc -static -o tmp tmp.s
   ./tmp
   actual="$?"
 
@@ -61,5 +61,11 @@ echo
 assert 1 'return 1; 2; 3;'
 assert 2 '1; return 2; 3;'
 assert 3 '1; 2; return 3;'
+
+echo
+echo 'assignments'
+echo
+assert 3 'a=3; return a;'
+assert 8 'a=3; z=5; return a+z;'
 
 echo OK
