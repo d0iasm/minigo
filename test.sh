@@ -3,7 +3,7 @@ assert() {
   input="$2"
 
   go build main.go tokenize.go parse.go codegen.go
-  ./main "$input" > tmp.s
+  ./main -in "$input" > tmp.s
   gcc -static -o tmp tmp.s
   ./tmp
   actual="$?"

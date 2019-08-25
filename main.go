@@ -1,26 +1,38 @@
 package main
 
 import (
-	//"fmt"
-	"os"
+	"flag"
+	"fmt"
 )
 
 var in string
 var userIn string
 
+var isDev bool
+
+func parseArgs() {
+	devPtr := flag.Bool("dev", false, "Output logs for development.")
+	inPtr := flag.String("in", "", "Input string directly.")
+
+	flag.Parse()
+
+	isDev = *devPtr
+	in = *inPtr
+	userIn = *inPtr
+}
+
 func main() {
-	if len(os.Args) != 2 {
-		panic("Invalid number of command line arguments.")
-	}
-	userIn = os.Args[1]
-	in = os.Args[1]
+	parseArgs()
 
 	tokens = tokenize()
-	//fmt.Println(tokens)
+	if isDev {
+		fmt.Println(tokens)
+	}
+
 	nodes := program()
-	//printNode(nodes[0], 0)
-	//fmt.Println("========")
-	//printNode(nodes[1], 0)
+	if isDev {
+		printNodes(nodes)
+	}
 
 	codegen(nodes)
 	return

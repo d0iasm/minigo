@@ -185,6 +185,13 @@ func primary() *Node {
 	return n
 }
 
+func printNodes(nodes []*Node) {
+	for i, n := range nodes {
+		fmt.Println("[Print Node] node:", i)
+		printNode(n, 0)
+	}
+}
+
 func printNode(node *Node, dep int) {
 	if node == nil {
 		return
