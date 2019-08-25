@@ -53,7 +53,7 @@ func (Var) isExpr()    {}
 func (IntLit) isExpr() {}
 
 // Statements.
-func (Assign) isExpr()   {} // TODO: expr -> stmt
+func (Assign) isStmt()   {}
 func (Return) isStmt()   {}
 func (ExprStmt) isStmt() {}
 func (Block) isStmt()    {}
@@ -86,6 +86,7 @@ func expect(op string) {
 }
 
 func program() []Function {
+	// Function body.
 	stmts := make([]Stmt, 0)
 	for len(tokens) > 0 {
 		stmts = append(stmts, stmt())
@@ -97,12 +98,14 @@ func program() []Function {
 }
 
 func stmt() Stmt {
+	// Return statement.
 	if consume("return") {
-		stmt := Return{expr()}
+		stmtN := Return{expr()}
 		expect(";")
-		return stmt
+		return stmtN
 	}
 
+	// Block.
 	if consume("{") {
 		stmts := make([]Stmt, 0)
 		for !consume("}") {
@@ -110,86 +113,86 @@ func stmt() Stmt {
 		}
 		return Block{stmts}
 	}
-	stmt := ExprStmt{expr()}
+
+	// Assignment statement.
+	exprN := equality()
+	if consume("=") {
+		stmtN := Assign{"=", exprN, expr()}
+		expect(";")
+		return stmtN
+	}
+
+	// Expression statement.
 	expect(";")
-	return stmt
+	return ExprStmt{exprN}
 }
 
 func expr() Expr {
-	return assign()
-}
-
-// TODO: Expr -> Stmt
-func assign() Expr {
-	expr := equality()
-	if consume("=") {
-		expr = Assign{"=", expr, assign()}
-	}
-	return expr
+	return equality()
 }
 
 func equality() Expr {
-	expr := relational()
+	exprN := relational()
 
 	for len(tokens) > 0 {
 		if consume("==") {
-			expr = Binary{"==", expr, relational()}
+			exprN = Binary{"==", exprN, relational()}
 		} else if consume("!=") {
-			expr = Binary{"!=", expr, relational()}
+			exprN = Binary{"!=", exprN, relational()}
 		} else {
-			return expr
+			return exprN
 		}
 	}
-	return expr
+	return exprN
 }
 
 func relational() Expr {
-	expr := add()
+	exprN := add()
 
 	for len(tokens) > 0 {
 		if consume("<") {
-			expr = Binary{"<", expr, add()}
+			exprN = Binary{"<", exprN, add()}
 		} else if consume("<=") {
-			expr = Binary{"<=", expr, add()}
+			exprN = Binary{"<=", exprN, add()}
 		} else if consume(">") {
-			expr = Binary{"<", add(), expr}
+			exprN = Binary{"<", add(), exprN}
 		} else if consume(">=") {
-			expr = Binary{"<=", add(), expr}
+			exprN = Binary{"<=", add(), exprN}
 		} else {
-			return expr
+			return exprN
 		}
 	}
-	return expr
+	return exprN
 }
 
 func add() Expr {
-	expr := mul()
+	exprN := mul()
 
 	for len(tokens) > 0 {
 		if consume("+") {
-			expr = Binary{"+", expr, mul()}
+			exprN = Binary{"+", exprN, mul()}
 		} else if consume("-") {
-			expr = Binary{"-", expr, mul()}
+			exprN = Binary{"-", exprN, mul()}
 		} else {
-			return expr
+			return exprN
 		}
 	}
-	return expr
+	return exprN
 }
 
 func mul() Expr {
-	expr := unary()
+	exprN := unary()
 
 	for len(tokens) > 0 {
 		if consume("*") {
-			expr = Binary{"*", expr, unary()}
+			exprN = Binary{"*", exprN, unary()}
 		} else if consume("/") {
-			expr = Binary{"/", expr, unary()}
+			exprN = Binary{"/", exprN, unary()}
 		} else {
-			return expr
+			return exprN
 		}
 	}
-	return expr
+	return exprN
 }
 
 func unary() Expr {
@@ -203,9 +206,9 @@ func unary() Expr {
 
 func primary() Expr {
 	if consume("(") {
-		expr := expr()
+		exprN := expr()
 		expect(")")
-		return expr
+		return exprN
 	}
 
 	// Identifiers
