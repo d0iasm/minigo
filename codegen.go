@@ -6,10 +6,8 @@ import (
 )
 
 func genAddr(node *Node) {
-	if node.kind == ND_LVAR {
-		// TODO: node.name now only takes one character.
-		offset := (int(node.name[0]) - int('a') + 1) * 8
-		fmt.Printf("  lea rax, [rbp-%d]\n", offset)
+	if node.kind == ND_VAR {
+		fmt.Printf("  lea rax, [rbp-%d]\n", node.varp.offset)
 		fmt.Printf("  push rax\n")
 		return
 	}
@@ -38,7 +36,7 @@ func gen(node *Node) {
 		gen(node.lhs)                // Use only left-side child node for expression statement.
 		fmt.Printf("  add rsp, 8\n") // Throw away the result of an expression.
 		return
-	case ND_LVAR:
+	case ND_VAR:
 		genAddr(node)
 		load()
 		return
@@ -93,7 +91,7 @@ func gen(node *Node) {
 	fmt.Printf("  push rax\n")
 }
 
-func codegen(nodes []*Node) {
+func codegen(funcs []Function) {
 	fmt.Printf(".intel_syntax noprefix\n")
 	fmt.Printf(".global main\n")
 	fmt.Printf("main:\n")
@@ -103,8 +101,10 @@ func codegen(nodes []*Node) {
 	fmt.Printf("  mov rbp, rsp\n")
 	fmt.Printf("  sub rsp, 208\n")
 
-	for _, n := range nodes {
-		gen(n)
+	for _, f := range funcs {
+		for _, n := range f.nodes {
+			gen(n)
+		}
 	}
 
 	fmt.Printf(".Lreturn:\n")

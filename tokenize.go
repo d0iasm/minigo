@@ -36,13 +36,17 @@ func isInt() bool {
 	return err == nil
 }
 
-func toInt() int {
+func getInt() int {
 	n := 0
 	for len(in) > 0 && '0' <= in[0] && in[0] <= '9' {
 		n = n*10 + int(in[0]-'0')
 		in = in[1:]
 	}
 	return n
+}
+
+func isAlpha() bool {
+	return ('a' <= in[0] && in[0] <= 'z') || ('A' <= in[0] && in[0] <= 'Z')
 }
 
 func tokenize() []Token {
@@ -72,13 +76,18 @@ func tokenize() []Token {
 			in = in[1:]
 			continue
 		}
-		if 'a' <= in[0] && in[0] <= 'z' {
-			tokens = append(tokens, Token{TK_IDENT, -1, in[0:1]})
+		if isAlpha() {
+			name := in[0:1]
 			in = in[1:]
+			for len(in) > 0 && (isAlpha() || isInt()) {
+				name += in[0:1]
+				in = in[1:]
+			}
+			tokens = append(tokens, Token{TK_IDENT, -1, name})
 			continue
 		}
 		if isInt() {
-			tokens = append(tokens, Token{TK_NUM, toInt(), ""})
+			tokens = append(tokens, Token{TK_NUM, getInt(), ""})
 			continue
 		}
 		tokenError("Unexcected character:", in[0:1])

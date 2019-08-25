@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+var locals []*Var
+
 type NodeKind int
 
 const (
@@ -19,7 +21,7 @@ const (
 	ND_ASSIGN           // =
 	ND_RETURN           // "return"
 	ND_EXPR_STMT        // Expression statements
-	ND_LVAR             // Local variables
+	ND_VAR              // Local variables
 	ND_NUM              // Integer literals
 )
 
@@ -27,20 +29,40 @@ type Node struct {
 	kind NodeKind
 	lhs  *Node
 	rhs  *Node
-	val  int    // Used if kind == ND_NUM, otherwise -1
-	name string // Used if kind == ND_LVAR, otherwise empty
+	val  int  // Used if kind == ND_NUM, otherwise -1
+	varp *Var // Used if kind == ND_VAR, otherwise nil
+}
+
+type Var struct {
+	name   string // Variable name
+	offset int    // Offset from RBP
+}
+
+type Function struct {
+	nodes     []*Node
+	locals    []*Var
+	stackSize int
 }
 
 func newNode(k NodeKind, l *Node, r *Node) *Node {
-	return &Node{k, l, r, -1, ""}
+	return &Node{k, l, r, -1, &Var{"", 0}}
 }
 
 func newNumNode(k NodeKind, v int) *Node {
-	return &Node{k, nil, nil, v, ""}
+	return &Node{k, nil, nil, v, &Var{"", 0}}
 }
 
-func newVarNode(n string) *Node {
-	return &Node{ND_LVAR, nil, nil, -1, n}
+func newVarNode(v *Var) *Node {
+	return &Node{ND_VAR, nil, nil, -1, v}
+}
+
+func findVar(tok Token) *Var {
+	for _, v := range locals {
+		if v.name == tok.str {
+			return v
+		}
+	}
+	return nil
 }
 
 func consume(op string) bool {
@@ -61,12 +83,15 @@ func expect(op string) {
 	os.Exit(1)
 }
 
-func program() []*Node {
+func program() []Function {
 	nodes := make([]*Node, 0)
 	for len(tokens) > 0 {
 		nodes = append(nodes, stmt())
 	}
-	return nodes
+
+	funcs := make([]Function, 0)
+	funcs = append(funcs, Function{nodes, locals, 0})
+	return funcs
 }
 
 func stmt() *Node {
@@ -172,14 +197,19 @@ func primary() *Node {
 		return node
 	}
 
-	// identifiers.
+	// Identifiers
 	if tokens[0].kind == TK_IDENT {
-		n := newVarNode(tokens[0].str)
+		varp := findVar(tokens[0])
+		if varp == nil {
+			varp = &Var{tokens[0].str, 0}
+			locals = append(locals, varp)
+		}
+		n := newVarNode(varp)
 		tokens = tokens[1:]
 		return n
 	}
 
-	// integer literals.
+	// Integer literals
 	n := newNumNode(ND_NUM, tokens[0].val)
 	tokens = tokens[1:]
 	return n
@@ -199,5 +229,5 @@ func printNode(node *Node, dep int) {
 
 	printNode(node.lhs, dep+1)
 	printNode(node.rhs, dep+1)
-	fmt.Printf("dep: %d, kind: %d, val: %d, name %s\n", dep, node.kind, node.val, node.name)
+	fmt.Printf("dep: %d, kind: %d, val: %d, name %s\n", dep, node.kind, node.val, node.varp.name)
 }
