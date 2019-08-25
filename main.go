@@ -31,7 +31,7 @@ func main() {
 
 	funcs := program()
 	if isDev {
-		printNodes(funcs[0].nodes)
+		//printNodes(funcs[0].nodes)
 	}
 
 	for _, f := range funcs {

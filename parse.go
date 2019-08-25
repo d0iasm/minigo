@@ -7,23 +7,37 @@ import (
 
 var locals []*Var
 
+type Expr interface {
+	isExpr()
+}
+
+type Stmt interface {
+	isStmt()
+}
+
 type Function struct {
-	nodes     []interface{}
+	stmts     []Stmt
 	locals    []*Var
 	stackSize int
 }
 
 type Binary struct {
-	lhs interface{}
-	rhs interface{}
+	op  string
+	lhs Expr
+	rhs Expr
 }
+
+type Assign Binary
 
 type Unary struct {
-	child interface{}
+	child Expr
 }
 
+type Return Unary
+type ExprStmt Unary
+
 type Block struct {
-	children []interface{}
+	children []Stmt
 }
 
 type Var struct {
@@ -31,18 +45,18 @@ type Var struct {
 	offset int    // Offset from RBP
 }
 
-type Add Binary
-type Sub Binary
-type Mul Binary
-type Div Binary
-type Eq Binary
-type Ne Binary
-type Lt Binary
-type Le Binary
-type Assign Binary
+type IntLit int
 
-type Return Unary
-type ExprStmt Unary
+// Expressions.
+func (Binary) isExpr() {}
+func (Var) isExpr()    {}
+func (IntLit) isExpr() {}
+
+// Statements.
+func (Assign) isExpr()   {} // TODO: expr -> stmt
+func (Return) isStmt()   {}
+func (ExprStmt) isStmt() {}
+func (Block) isStmt()    {}
 
 func findVar(tok Token) *Var {
 	for _, v := range locals {
@@ -72,125 +86,126 @@ func expect(op string) {
 }
 
 func program() []Function {
-	nodes := make([]interface{}, 0)
+	stmts := make([]Stmt, 0)
 	for len(tokens) > 0 {
-		nodes = append(nodes, stmt())
+		stmts = append(stmts, stmt())
 	}
 
 	funcs := make([]Function, 0)
-	funcs = append(funcs, Function{nodes, locals, 0})
+	funcs = append(funcs, Function{stmts, locals, 0})
 	return funcs
 }
 
-func stmt() interface{} {
+func stmt() Stmt {
 	if consume("return") {
-		node := Return{expr()}
+		stmt := Return{expr()}
 		expect(";")
-		return node
+		return stmt
 	}
 
 	if consume("{") {
-		stmts := make([]interface{}, 0)
+		stmts := make([]Stmt, 0)
 		for !consume("}") {
 			stmts = append(stmts, stmt())
 		}
 		return Block{stmts}
 	}
-	node := ExprStmt{expr()}
+	stmt := ExprStmt{expr()}
 	expect(";")
-	return node
+	return stmt
 }
 
-func expr() interface{} {
+func expr() Expr {
 	return assign()
 }
 
-func assign() interface{} {
-	node := equality()
+// TODO: Expr -> Stmt
+func assign() Expr {
+	expr := equality()
 	if consume("=") {
-		node = Assign{node, assign()}
+		expr = Assign{"=", expr, assign()}
 	}
-	return node
+	return expr
 }
 
-func equality() interface{} {
-	node := relational()
+func equality() Expr {
+	expr := relational()
 
 	for len(tokens) > 0 {
 		if consume("==") {
-			node = Eq{node, relational()}
+			expr = Binary{"==", expr, relational()}
 		} else if consume("!=") {
-			node = Ne{node, relational()}
+			expr = Binary{"!=", expr, relational()}
 		} else {
-			return node
+			return expr
 		}
 	}
-	return node
+	return expr
 }
 
-func relational() interface{} {
-	node := add()
+func relational() Expr {
+	expr := add()
 
 	for len(tokens) > 0 {
 		if consume("<") {
-			node = Lt{node, add()}
+			expr = Binary{"<", expr, add()}
 		} else if consume("<=") {
-			node = Le{node, add()}
+			expr = Binary{"<=", expr, add()}
 		} else if consume(">") {
-			node = Lt{add(), node}
+			expr = Binary{"<", add(), expr}
 		} else if consume(">=") {
-			node = Le{add(), node}
+			expr = Binary{"<=", add(), expr}
 		} else {
-			return node
+			return expr
 		}
 	}
-	return node
+	return expr
 }
 
-func add() interface{} {
-	node := mul()
+func add() Expr {
+	expr := mul()
 
 	for len(tokens) > 0 {
 		if consume("+") {
-			node = Add{node, mul()}
+			expr = Binary{"+", expr, mul()}
 		} else if consume("-") {
-			node = Sub{node, mul()}
+			expr = Binary{"-", expr, mul()}
 		} else {
-			return node
+			return expr
 		}
 	}
-	return node
+	return expr
 }
 
-func mul() interface{} {
-	node := unary()
+func mul() Expr {
+	expr := unary()
 
 	for len(tokens) > 0 {
 		if consume("*") {
-			node = Mul{node, unary()}
+			expr = Binary{"*", expr, unary()}
 		} else if consume("/") {
-			node = Div{node, unary()}
+			expr = Binary{"/", expr, unary()}
 		} else {
-			return node
+			return expr
 		}
 	}
-	return node
+	return expr
 }
 
-func unary() interface{} {
+func unary() Expr {
 	if consume("+") {
 		return unary()
 	} else if consume("-") {
-		return Sub{0, unary()} // -val = 0 - val
+		return Binary{"-", IntLit(0), unary()} // -val = 0 - val
 	}
 	return primary()
 }
 
-func primary() interface{} {
+func primary() Expr {
 	if consume("(") {
-		node := expr()
+		expr := expr()
 		expect(")")
-		return node
+		return expr
 	}
 
 	// Identifiers
@@ -205,11 +220,12 @@ func primary() interface{} {
 	}
 
 	// Integer literals
-	n := tokens[0].val
+	n := IntLit(tokens[0].val)
 	tokens = tokens[1:]
 	return n
 }
 
+/**
 func printNodes(nodes []interface{}) {
 	for i, n := range nodes {
 		fmt.Println("[Print Node] node:", i)
@@ -241,3 +257,4 @@ func printNode(node interface{}, dep int) {
 		printNode(n.rhs, dep+1)
 	}
 }
+*/

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 )
 
 var labelseq int = 1
@@ -31,7 +30,7 @@ func store() {
 
 func gen(node interface{}) {
 	switch n := node.(type) {
-	case int:
+	case IntLit:
 		fmt.Printf("  push %d\n", n)
 		return
 	case ExprStmt:
@@ -60,74 +59,42 @@ func gen(node interface{}) {
 		fmt.Printf("  pop rax\n")
 		fmt.Printf("  jmp .Lreturn\n")
 		return
-	case Add:
-		gen(n.lhs)
-		gen(n.rhs)
-		fmt.Printf("  pop rdi\n")
-		fmt.Printf("  pop rax\n")
+	}
 
+	n := node.(Binary)
+	gen(n.lhs)
+	gen(n.rhs)
+	fmt.Printf("  pop rdi\n")
+	fmt.Printf("  pop rax\n")
+
+	switch n.op {
+	case "+":
 		fmt.Printf("  add rax, rdi\n")
-	case Sub:
-		gen(n.lhs)
-		gen(n.rhs)
-		fmt.Printf("  pop rdi\n")
-		fmt.Printf("  pop rax\n")
-
+	case "-":
 		fmt.Printf("  sub rax, rdi\n")
-	case Mul:
-		gen(n.lhs)
-		gen(n.rhs)
-		fmt.Printf("  pop rdi\n")
-		fmt.Printf("  pop rax\n")
-
+	case "*":
 		fmt.Printf("  imul rax, rdi\n")
-	case Div:
-		gen(n.lhs)
-		gen(n.rhs)
-		fmt.Printf("  pop rdi\n")
-		fmt.Printf("  pop rax\n")
-
+	case "/":
 		fmt.Printf("  cqo\n")
 		fmt.Printf("  idiv rdi\n")
-	case Eq:
-		gen(n.lhs)
-		gen(n.rhs)
-		fmt.Printf("  pop rdi\n")
-		fmt.Printf("  pop rax\n")
-
+	case "==":
 		fmt.Printf("  cmp rax, rdi\n")
 		fmt.Printf("  sete al\n")
 		fmt.Printf("  movzx rax, al\n")
-	case Ne:
-		gen(n.lhs)
-		gen(n.rhs)
-		fmt.Printf("  pop rdi\n")
-		fmt.Printf("  pop rax\n")
-
+	case "!=":
 		fmt.Printf("  cmp rax, rdi\n")
 		fmt.Printf("  setne al\n")
 		fmt.Printf("  movzx rax, al\n")
-	case Lt:
-		gen(n.lhs)
-		gen(n.rhs)
-		fmt.Printf("  pop rdi\n")
-		fmt.Printf("  pop rax\n")
-
+	case "<":
 		fmt.Printf("  cmp rax, rdi\n")
 		fmt.Printf("  setl al\n")
 		fmt.Printf("  movzx rax, al\n")
-	case Le:
-		gen(n.lhs)
-		gen(n.rhs)
-		fmt.Printf("  pop rdi\n")
-		fmt.Printf("  pop rax\n")
-
+	case "<=":
 		fmt.Printf("  cmp rax, rdi\n")
 		fmt.Printf("  setle al\n")
 		fmt.Printf("  movzx rax, al\n")
 	default:
-		fmt.Println("[Error] Unexpected node:", n)
-		os.Exit(1)
+		panic("[Error] Unexpected node")
 	}
 	fmt.Printf("  push rax\n")
 }
@@ -143,8 +110,8 @@ func codegen(funcs []Function) {
 	fmt.Printf("  sub rsp, 208\n")
 
 	for _, f := range funcs {
-		for _, n := range f.nodes {
-			gen(n)
+		for _, s := range f.stmts {
+			gen(s)
 		}
 	}
 
