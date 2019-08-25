@@ -31,16 +31,11 @@ func main() {
 
 	funcs := program()
 	if isDev {
-		//printNodes(funcs[0].nodes)
+		printNodes(funcs[0].stmts)
 	}
 
 	for _, f := range funcs {
-		offset := 0
-		for _, v := range f.locals {
-			offset += 8
-			v.offset = offset
-		}
-		f.stackSize = offset
+		f.stackSize = len(f.locals) * 8
 	}
 
 	codegen(funcs)

@@ -31,12 +31,12 @@ func tokenError(f string, vars ...string) {
 	os.Exit(1)
 }
 
-func isInt() bool {
-	_, err := strconv.Atoi(in[0:1])
+func isNum(b byte) bool {
+	_, err := strconv.Atoi(string(b))
 	return err == nil
 }
 
-func getInt() int {
+func getNum() int {
 	n := 0
 	for len(in) > 0 && '0' <= in[0] && in[0] <= '9' {
 		n = n*10 + int(in[0]-'0')
@@ -45,14 +45,35 @@ func getInt() int {
 	return n
 }
 
-func isAlpha() bool {
-	return ('a' <= in[0] && in[0] <= 'z') || ('A' <= in[0] && in[0] <= 'Z')
+func isAlpha(b byte) bool {
+	return ('a' <= b && b <= 'z') || ('A' <= b && b <= 'Z')
 }
 
-func startsReserved() bool {
-	// TODO
-	//kws := {"return", "if", "else"}
-	return true
+func isAlnum(b byte) bool {
+	return isNum(b) || isAlpha(b)
+}
+
+func startsReserved() string {
+	keywords := []string{"return", "if", "else"}
+	for _, kw := range keywords {
+		if strings.HasPrefix(in, kw) {
+			if len(kw) == len(in) || !isAlnum(in[len(kw)]) {
+				return kw
+			}
+		}
+	}
+
+	ops := []string{"==", "!=", "<=", ">="}
+	for _, op := range ops {
+		if strings.HasPrefix(in, op) {
+			return op
+		}
+	}
+
+	if strings.Contains("+-*/()<>;={}", in[0:1]) {
+		return in[0:1]
+	}
+	return ""
 }
 
 func tokenize() []Token {
@@ -62,38 +83,24 @@ func tokenize() []Token {
 			in = in[1:]
 			continue
 		}
-		if len(in) > 6 {
-			if in[0:6] == "return" {
-				tokens = append(tokens, Token{TK_RESERVED, -1, in[0:6]})
-				in = in[6:]
-				continue
-			}
-		}
-		if len(in) > 2 {
-			if in[0:2] == "==" || in[0:2] == "!=" ||
-				in[0:2] == "<=" || in[0:2] == ">=" {
-				tokens = append(tokens, Token{TK_RESERVED, -1, in[0:2]})
-				in = in[2:]
-				continue
-			}
-		}
-		if strings.Contains("+-*/()<>;={}", in[0:1]) {
-			tokens = append(tokens, Token{TK_RESERVED, -1, in[0:1]})
-			in = in[1:]
+		kw := startsReserved()
+		if len(kw) != 0 {
+			tokens = append(tokens, Token{TK_RESERVED, -1, kw})
+			in = in[len(kw):]
 			continue
 		}
-		if isAlpha() {
+		if isAlpha(in[0]) {
 			name := in[0:1]
 			in = in[1:]
-			for len(in) > 0 && (isAlpha() || isInt()) {
+			for len(in) > 0 && isAlnum(in[0]) {
 				name += in[0:1]
 				in = in[1:]
 			}
 			tokens = append(tokens, Token{TK_IDENT, -1, name})
 			continue
 		}
-		if isInt() {
-			tokens = append(tokens, Token{TK_NUM, getInt(), ""})
+		if isNum(in[0]) {
+			tokens = append(tokens, Token{TK_NUM, getNum(), ""})
 			continue
 		}
 		tokenError("Unexcected character:", in[0:1])

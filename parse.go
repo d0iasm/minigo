@@ -5,7 +5,8 @@ import (
 	"os"
 )
 
-var locals []*Var
+var locals []Var
+var varOffset int = 8
 
 type Expr interface {
 	isExpr()
@@ -17,7 +18,7 @@ type Stmt interface {
 
 type Function struct {
 	stmts     []Stmt
-	locals    []*Var
+	locals    []Var
 	stackSize int
 }
 
@@ -61,7 +62,7 @@ func (Block) isStmt()    {}
 func findVar(tok Token) *Var {
 	for _, v := range locals {
 		if v.name == tok.str {
-			return v
+			return &v
 		}
 	}
 	return nil
@@ -215,8 +216,9 @@ func primary() Expr {
 	if tokens[0].kind == TK_IDENT {
 		varp := findVar(tokens[0])
 		if varp == nil {
-			varp = &Var{tokens[0].str, 0}
-			locals = append(locals, varp)
+			varp = &Var{tokens[0].str, varOffset}
+			varOffset += 8
+			locals = append(locals, *varp)
 		}
 		tokens = tokens[1:]
 		return *varp
@@ -228,11 +230,10 @@ func primary() Expr {
 	return n
 }
 
-/**
-func printNodes(nodes []interface{}) {
-	for i, n := range nodes {
+func printNodes(stmts []Stmt) {
+	for i, s := range stmts {
 		fmt.Println("[Print Node] node:", i)
-		printNode(n, 0)
+		printNode(s, 0)
 	}
 }
 
@@ -242,22 +243,28 @@ func printNode(node interface{}, dep int) {
 	}
 
 	switch n := node.(type) {
-	case int:
+	case IntLit:
 		fmt.Printf("INT dep: %d, val: %d\n", dep, n)
 	case Var:
-		fmt.Printf("VAR dep: %d, name: %s, offset: %d\n", dep, n.name, n.offset)
+		fmt.Printf("VAR dep: %d, name: %s, offset: %d, addr: %p\n", dep, n.name, n.offset, &n)
 	case Block:
 		fmt.Printf("BLOCK dep: %d\n", dep)
 		for _, c := range n.children {
 			printNode(c, dep)
 		}
-	case Unary:
-		fmt.Printf("UNARY dep: %d\n", dep)
+	case Return:
+		fmt.Printf("RETURN dep: %d\n", dep)
+		printNode(n.child, dep+1)
+	case ExprStmt:
+		fmt.Printf("ExprStmt dep: %d\n", dep)
 		printNode(n.child, dep+1)
 	case Binary:
 		fmt.Printf("BINARY dep: %d\n", dep)
 		printNode(n.lhs, dep+1)
 		printNode(n.rhs, dep+1)
+	case Assign:
+		fmt.Printf("ASSIGN dep: %d\n", dep)
+		printNode(n.lhs, dep+1)
+		printNode(n.rhs, dep+1)
 	}
 }
-*/
