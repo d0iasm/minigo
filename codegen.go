@@ -62,8 +62,8 @@ func gen(node *Node) {
 
 func codegen(nodes []*Node) {
 	fmt.Printf(".intel_syntax noprefix\n")
-	fmt.Printf(".global _main\n")
-	fmt.Printf("_main:\n")
+	fmt.Printf(".global main\n")
+	fmt.Printf("main:\n")
 
 	for _, n := range nodes {
 		gen(n)
