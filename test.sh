@@ -84,6 +84,12 @@ assert 2 'if 1 {return 2;} else {return 3;}'
 assert 2 'if 2-1 {return 2;} else {return 3;}'
 assert 3 'if 0 {return 2;} else if 1 {return 3;}'
 assert 1 'if 1 { if 2 { return 1; } }'
-assert 2 'if 1 { if 0 { return 1; } return 2; }'
+assert 2  'if 1 { if 0 { return 1; } return 2; }'
+
+echo
+echo 'for statements'
+echo
+assert 10 'i=0; for i<10 { i=i+2; i=i-1; } return i;'
+assert 3 'for { return 3; }'
 
 echo OK

@@ -73,6 +73,20 @@ func gen(node interface{}) {
 			fmt.Printf(".Lend%d:\n", seq)
 		}
 		return
+	case For:
+		seq := labelseq
+		labelseq++
+		fmt.Printf(".Lbegin%d:\n", seq)
+		if n.cond != nil {
+			gen(n.cond)
+			fmt.Printf("  pop rax\n")
+			fmt.Printf("  cmp rax, 0\n")
+			fmt.Printf("  je  .Lend%d\n", seq)
+		}
+		gen(n.then)
+		fmt.Printf("  jmp .Lbegin%d\n", seq)
+		fmt.Printf(".Lend%d:\n", seq)
+		return
 	case Return:
 		gen(n.child)
 		fmt.Printf("  pop rax\n")

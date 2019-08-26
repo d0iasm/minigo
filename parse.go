@@ -47,6 +47,13 @@ type If struct {
 	els  Stmt
 }
 
+type For struct {
+	//init Stmt // TODO: implement
+	cond Expr
+	//post Stmt // TODO: implement
+	then Stmt
+}
+
 type Var struct {
 	name   string // Variable name
 	offset int    // Offset from RBP
@@ -65,6 +72,7 @@ func (Return) isStmt()   {}
 func (ExprStmt) isStmt() {}
 func (Block) isStmt()    {}
 func (If) isStmt()       {}
+func (For) isStmt()      {}
 
 func findVar(tok Token) *Var {
 	for _, v := range locals {
@@ -83,12 +91,16 @@ func consume(op string) bool {
 	return false
 }
 
-func expect(op string) {
+func assert(op string) {
 	if len(tokens) != 0 && tokens[0].str == op {
 		tokens = tokens[1:]
 		return
 	}
 	panic(fmt.Sprintf("%s \n [Error] expected %s but got %s\n", tokens, op, tokens[0].str))
+}
+
+func next(op string) bool {
+	return len(tokens) != 0 && tokens[0].str == op
 }
 
 func program() []Function {
@@ -107,7 +119,7 @@ func stmt() Stmt {
 	// Return statement.
 	if consume("return") {
 		stmtN := Return{expr()}
-		expect(";")
+		assert(";")
 		return stmtN
 	}
 
@@ -122,34 +134,41 @@ func stmt() Stmt {
 
 	// If statement.
 	if consume("if") {
-		cond := expr()
-		then := Stmt(nil)
-		if tokens[0].str == "{" {
-			then = stmt()
+		ifstmt := If{expr(), nil, nil}
+		if next("{") {
+			ifstmt.then = stmt()
 		} else {
-			expect("{")
+			assert("{")
 		}
-		els := Stmt(nil)
 		if consume("else") {
-			if tokens[0].str == "if" || tokens[0].str == "{" {
-				els = stmt()
+			if next("if") || next("{") {
+				ifstmt.els = stmt()
 			} else {
-				expect("{")
+				assert("if / {")
 			}
 		}
-		return If{cond, then, els}
+		return ifstmt
+	}
+
+	if consume("for") {
+		forstmt := For{nil, nil}
+		if tokens[0].str != "{" {
+			forstmt.cond = expr()
+		}
+		forstmt.then = stmt()
+		return forstmt
 	}
 
 	// Assignment statement.
 	exprN := equality()
 	if consume("=") {
 		stmtN := Assign{"=", exprN, expr()}
-		expect(";")
+		assert(";")
 		return stmtN
 	}
 
 	// Expression statement.
-	expect(";")
+	assert(";")
 	return ExprStmt{exprN}
 }
 
@@ -233,7 +252,7 @@ func unary() Expr {
 func primary() Expr {
 	if consume("(") {
 		exprN := expr()
-		expect(")")
+		assert(")")
 		return exprN
 	}
 
@@ -277,6 +296,10 @@ func printNode(node interface{}, dep int) {
 		for _, c := range n.children {
 			printNode(c, dep)
 		}
+	case If:
+		fmt.Printf("FOR dep: %d\n", dep)
+	case For:
+		fmt.Printf("FOR dep: %d\n", dep)
 	case Return:
 		fmt.Printf("RETURN dep: %d\n", dep)
 		printNode(n.child, dep+1)
