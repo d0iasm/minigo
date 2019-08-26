@@ -48,9 +48,9 @@ type If struct {
 }
 
 type For struct {
-	//init Stmt // TODO: implement
+	init Stmt
 	cond Expr
-	//post Stmt // TODO: implement
+	post Stmt // TODO: implement
 	then Stmt
 }
 
@@ -156,25 +156,40 @@ func stmt() Stmt {
 
 	// For statement.
 	if consume("for") {
-		forstmt := For{nil, nil}
-		if tokens[0].str != "{" {
-			forstmt.cond = expr()
-		}
-		forstmt.then = stmt()
-		return forstmt
+		init, cond, post := forHeaders()
+		return For{init, cond, post, stmt()}
 	}
 
 	return simpleStmt(expr())
 }
 
 func ifHeaders() (Stmt, Expr) {
-	stmtN := Stmt(nil)
-	exprN := expr()
+	s1 := Stmt(nil)
+	e1 := expr()
 	if !next("{") {
-		stmtN = simpleStmt(exprN)
-		exprN = expr()
+		s1 = simpleStmt(e1)
+		e1 = expr()
 	}
-	return stmtN, exprN
+	return s1, e1
+}
+
+func forHeaders() (Stmt, Expr, Stmt) {
+	s1 := Stmt(nil)
+	e1 := Expr(nil)
+	s2 := Stmt(nil)
+	// No options (init statement, condition, post statement).
+	if next("{") {
+		return s1, e1, s2
+	}
+	e1 = expr()
+	if !next("{") {
+		s1 = simpleStmt(e1)
+		e1 = expr()
+	}
+	if !next("{") {
+		s2 = ExprStmt{expr()}
+	}
+	return s1, e1, s2
 }
 
 func simpleStmt(exprN Expr) Stmt {
@@ -324,11 +339,13 @@ func printNode(node interface{}, dep int) {
 		printNode(n.then, dep)
 		printNode(n.els, dep)
 	case For:
-		fmt.Printf("FOR dep: %d %v\n", dep, n)
+		fmt.Printf("FOR dep: %d %#v\n", dep, n)
+		printNode(n.init, dep)
 		printNode(n.cond, dep)
+		printNode(n.post, dep)
 		printNode(n.then, dep)
 	case Return:
-		fmt.Printf("RETURN dep: %d %v\n", dep, n)
+		fmt.Printf("RETURN dep: %d %#v\n", dep, n)
 		printNode(n.child, dep+1)
 	case ExprStmt:
 		fmt.Printf("ExprStmt dep: %d\n", dep)

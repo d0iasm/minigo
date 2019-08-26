@@ -30,6 +30,8 @@ func store() {
 
 func gen(node interface{}) {
 	switch n := node.(type) {
+	case Empty:
+		return
 	case IntLit:
 		fmt.Printf("  push %d\n", n)
 		return
@@ -79,6 +81,9 @@ func gen(node interface{}) {
 	case For:
 		seq := labelseq
 		labelseq++
+		if n.init != nil {
+			gen(n.init)
+		}
 		fmt.Printf(".Lbegin%d:\n", seq)
 		if n.cond != nil {
 			gen(n.cond)
@@ -87,6 +92,9 @@ func gen(node interface{}) {
 			fmt.Printf("  je  .Lend%d\n", seq)
 		}
 		gen(n.then)
+		if n.post != nil {
+			gen(n.post)
+		}
 		fmt.Printf("  jmp .Lbegin%d\n", seq)
 		fmt.Printf(".Lend%d:\n", seq)
 		return
