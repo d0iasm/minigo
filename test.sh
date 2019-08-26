@@ -85,6 +85,8 @@ assert 2 'if 2-1 {return 2;} else {return 3;}'
 assert 3 'if 0 {return 2;} else if 1 {return 3;}'
 assert 1 'if 1 { if 2 { return 1; } }'
 assert 2  'if 1 { if 0 { return 1; } return 2; }'
+assert 1  'if i=1; i>0 { return i; }'
+assert 3  'if i=1; i>0 { i=i+2; return i; }'
 
 echo
 echo 'for statements'

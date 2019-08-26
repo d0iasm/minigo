@@ -54,6 +54,9 @@ func gen(node interface{}) {
 	case If:
 		seq := labelseq
 		labelseq++
+		if n.init != nil {
+			gen(n.init)
+		}
 		if n.els != nil {
 			gen(n.cond)
 			fmt.Printf("  pop rax\n")

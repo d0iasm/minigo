@@ -41,7 +41,7 @@ type Block struct {
 }
 
 type If struct {
-	// init Stmt // TODO: implement
+	init Stmt
 	cond Expr
 	then Stmt
 	els  Stmt
@@ -137,7 +137,8 @@ func stmt() Stmt {
 
 	// If statement.
 	if consume("if") {
-		ifstmt := If{expr(), nil, nil}
+		init, cond := ifHeaders()
+		ifstmt := If{init, cond, nil, nil}
 		if next("{") {
 			ifstmt.then = stmt()
 		} else {
@@ -163,11 +164,20 @@ func stmt() Stmt {
 		return forstmt
 	}
 
-	return simpleStmt()
+	return simpleStmt(expr())
 }
 
-func simpleStmt() Stmt {
+func ifHeaders() (Stmt, Expr) {
+	stmtN := Stmt(nil)
 	exprN := expr()
+	if !next("{") {
+		stmtN = simpleStmt(exprN)
+		exprN = expr()
+	}
+	return stmtN, exprN
+}
+
+func simpleStmt(exprN Expr) Stmt {
 	// Assignment statement.
 	if consume("=") {
 		stmtN := Assign{"=", exprN, expr()}
@@ -293,6 +303,7 @@ func printNodes(stmts []Stmt) {
 
 func printNode(node interface{}, dep int) {
 	if node == nil {
+		fmt.Printf("nil, dep: %d\n", dep)
 		return
 	}
 
@@ -307,11 +318,17 @@ func printNode(node interface{}, dep int) {
 			printNode(c, dep)
 		}
 	case If:
-		fmt.Printf("FOR dep: %d\n", dep)
+		fmt.Printf("If dep: %d\n", dep, n)
+		printNode(n.init, dep)
+		printNode(n.cond, dep)
+		printNode(n.then, dep)
+		printNode(n.els, dep)
 	case For:
-		fmt.Printf("FOR dep: %d\n", dep)
+		fmt.Printf("FOR dep: %d %v\n", dep, n)
+		printNode(n.cond, dep)
+		printNode(n.then, dep)
 	case Return:
-		fmt.Printf("RETURN dep: %d\n", dep)
+		fmt.Printf("RETURN dep: %d %v\n", dep, n)
 		printNode(n.child, dep+1)
 	case ExprStmt:
 		fmt.Printf("ExprStmt dep: %d\n", dep)

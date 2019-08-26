@@ -32,6 +32,7 @@ func main() {
 	funcs := program()
 	if isDev {
 		printNodes(funcs[0].stmts)
+		fmt.Println("===============")
 	}
 
 	for _, f := range funcs {
