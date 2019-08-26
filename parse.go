@@ -59,6 +59,8 @@ type Var struct {
 	offset int    // Offset from RBP
 }
 
+type Empty struct{}
+
 type IntLit int
 
 // Expressions.
@@ -73,6 +75,7 @@ func (ExprStmt) isStmt() {}
 func (Block) isStmt()    {}
 func (If) isStmt()       {}
 func (For) isStmt()      {}
+func (Empty) isStmt()    {}
 
 func findVar(tok Token) *Var {
 	for _, v := range locals {
@@ -150,6 +153,7 @@ func stmt() Stmt {
 		return ifstmt
 	}
 
+	// For statement.
 	if consume("for") {
 		forstmt := For{nil, nil}
 		if tokens[0].str != "{" {
@@ -159,8 +163,12 @@ func stmt() Stmt {
 		return forstmt
 	}
 
+	return simpleStmt()
+}
+
+func simpleStmt() Stmt {
+	exprN := expr()
 	// Assignment statement.
-	exprN := equality()
 	if consume("=") {
 		stmtN := Assign{"=", exprN, expr()}
 		assert(";")
@@ -168,8 +176,10 @@ func stmt() Stmt {
 	}
 
 	// Expression statement.
-	assert(";")
-	return ExprStmt{exprN}
+	if consume(";") {
+		return ExprStmt{exprN}
+	}
+	return Empty{}
 }
 
 func expr() Expr {
