@@ -67,6 +67,7 @@ type IntLit int
 func (Binary) isExpr() {}
 func (Var) isExpr()    {}
 func (IntLit) isExpr() {}
+func (Empty) isExpr()  {}
 
 // Statements.
 func (Assign) isStmt()   {}
@@ -168,22 +169,44 @@ func ifHeaders() (Stmt, Expr) {
 	e1 := expr()
 	if !next("{") {
 		s1 = simpleStmt(e1)
+		assert(";")
 		e1 = expr()
 	}
 	return s1, e1
 }
 
+/*
+func getForType() int {
+	if next("{") {
+		// No options.
+		return 0
+	}
+	tmp := tokens
+	expr()
+	tokens = tmp
+	if next("{") {
+		// Condition.
+		return 1
+	}
+	// For clause ([init] ; [cond] ; [post]).
+	return 3
+}
+*/
+
 func forHeaders() (Stmt, Expr, Stmt) {
 	s1 := Stmt(nil)
 	e1 := Expr(nil)
 	s2 := Stmt(nil)
-	// No options (init statement, condition, post statement).
+	// No options.
 	if next("{") {
 		return s1, e1, s2
 	}
+	// Condition.
 	e1 = expr()
+	// For clause ([init] ; [cond] ; [post]).
 	if !next("{") {
 		s1 = simpleStmt(e1)
+		assert(";")
 		e1 = expr()
 	}
 	if !next("{") {
@@ -193,21 +216,24 @@ func forHeaders() (Stmt, Expr, Stmt) {
 }
 
 func simpleStmt(exprN Expr) Stmt {
+	switch exprN.(type) {
+	case Empty:
+		return Empty{}
+	}
+
 	// Assignment statement.
 	if consume("=") {
-		stmtN := Assign{"=", exprN, expr()}
-		assert(";")
-		return stmtN
+		return Assign{"=", exprN, expr()}
 	}
 
 	// Expression statement.
-	if consume(";") {
-		return ExprStmt{exprN}
-	}
-	return Empty{}
+	return ExprStmt{exprN}
 }
 
 func expr() Expr {
+	if consume(";") {
+		return Empty{}
+	}
 	return equality()
 }
 

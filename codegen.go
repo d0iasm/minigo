@@ -28,6 +28,17 @@ func store() {
 	fmt.Printf("  push rdi\n")
 }
 
+func isEmpty(node interface{}) bool {
+	if node == nil {
+		return true
+	}
+	switch node.(type) {
+	case Empty:
+		return true
+	}
+	return false
+}
+
 func gen(node interface{}) {
 	switch n := node.(type) {
 	case Empty:
@@ -81,18 +92,18 @@ func gen(node interface{}) {
 	case For:
 		seq := labelseq
 		labelseq++
-		if n.init != nil {
+		if !isEmpty(n.init) {
 			gen(n.init)
 		}
 		fmt.Printf(".Lbegin%d:\n", seq)
-		if n.cond != nil {
+		if !isEmpty(n.cond) {
 			gen(n.cond)
 			fmt.Printf("  pop rax\n")
 			fmt.Printf("  cmp rax, 0\n")
 			fmt.Printf("  je  .Lend%d\n", seq)
 		}
 		gen(n.then)
-		if n.post != nil {
+		if !isEmpty(n.post) {
 			gen(n.post)
 		}
 		fmt.Printf("  jmp .Lbegin%d\n", seq)

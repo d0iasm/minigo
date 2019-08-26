@@ -93,6 +93,8 @@ echo 'for statements'
 echo
 assert 3 'for { return 3; }'
 assert 10 'i=0; for i<10 { i=i+2; i=i-1; } return i;'
-assert 10 'for i=0; i<10; i=i+1; { 1; } return i;' # TODO: remove ';' in 'i=i+1;'
+assert 10 'for i=0; i<10; i=i+1 { 1; } return i;'
+# TODO: something wrong.
+# assert 10 'i=0; for ; i<10; i=i+1; { i=i; } return i;'
 
 echo OK
