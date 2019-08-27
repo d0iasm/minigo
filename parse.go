@@ -7,18 +7,28 @@ import (
 var tmpLocals []Var
 var varOffset int = 8
 
-type Expr interface {
-	isExpr()
+// -------------------- Interfaces --------------------
+// All declaration nodes must implement the Decl interface.
+type Decl interface {
+	isDecl()
 }
 
+// All statement nodes must implement the Stmt interface.
 type Stmt interface {
 	isStmt()
 }
 
+// All expression nodes must implement the Expr interface.
+type Expr interface {
+	isExpr()
+}
+
+// -------------------- Top level program --------------------
 type Program struct {
 	funcs []Function
 }
 
+// -------------------- Declarations --------------------
 type Function struct {
 	name      string
 	params    []Var
@@ -27,27 +37,12 @@ type Function struct {
 	stackSize int
 }
 
-type FuncCall struct {
-	name string
-	args []Expr
-}
+func (Function) isDecl() {}
 
-type Binary struct {
-	op  string
-	lhs Expr
-	rhs Expr
-}
-
-type Assign Binary
-
+// -------------------- Statements --------------------
 type Unary struct {
 	child Expr
 }
-
-type Return Unary
-type ExprStmt Unary
-type Addr Unary
-type Deref Unary
 
 type Block struct {
 	children []Stmt
@@ -67,25 +62,11 @@ type For struct {
 	then Stmt
 }
 
-type Var struct {
-	name   string // Variable name
-	offset int    // Offset from RBP
-}
-
 type Empty struct{}
+type Assign Binary
+type Return Unary
+type ExprStmt Unary
 
-type IntLit int
-
-// Expressions.
-func (FuncCall) isExpr() {}
-func (Binary) isExpr()   {}
-func (Addr) isExpr()     {}
-func (Deref) isExpr()    {}
-func (Var) isExpr()      {}
-func (IntLit) isExpr()   {}
-func (Empty) isExpr()    {}
-
-// Statements.
 func (Assign) isStmt()   {}
 func (Return) isStmt()   {}
 func (ExprStmt) isStmt() {}
@@ -93,6 +74,35 @@ func (Block) isStmt()    {}
 func (If) isStmt()       {}
 func (For) isStmt()      {}
 func (Empty) isStmt()    {}
+
+// -------------------- Expressions --------------------
+type Binary struct {
+	op  string
+	lhs Expr
+	rhs Expr
+}
+
+type FuncCall struct {
+	name string
+	args []Expr
+}
+
+type Var struct {
+	name   string // Variable name
+	offset int    // Offset from RBP
+}
+
+type Addr Unary
+type Deref Unary
+type IntLit int
+
+func (Binary) isExpr()   {}
+func (FuncCall) isExpr() {}
+func (Var) isExpr()      {}
+func (Addr) isExpr()     {}
+func (Deref) isExpr()    {}
+func (IntLit) isExpr()   {}
+func (Empty) isExpr()    {}
 
 func findVar(tok Token) *Var {
 	for _, v := range tmpLocals {
@@ -130,6 +140,78 @@ func assert(op string) {
 
 func next(op string) bool {
 	return len(tokens) != 0 && tokens[0].str == op
+}
+
+func funcArgs() []Expr {
+	args := make([]Expr, 0)
+	if consume(")") {
+		return args
+	}
+
+	args = append(args, expr())
+	for consume(",") {
+		args = append(args, expr())
+	}
+	assert(")")
+	return args
+}
+
+func funcParams() []Var {
+	params := make([]Var, 0)
+	if next(")") {
+		return params
+	}
+
+	for {
+		tok := consumeIdent()
+		if tok == nil {
+			panic("Expect an identifier inside function parameters.")
+		}
+
+		v := Var{tok.str, varOffset}
+		varOffset += 8
+		tmpLocals = append(tmpLocals, v)
+		params = append(params, v)
+
+		if !consume(",") {
+			break
+		}
+	}
+	return params
+}
+
+func ifHeaders() (Stmt, Expr) {
+	s1 := Stmt(nil)
+	e1 := expr()
+	if !next("{") {
+		s1 = simpleStmt(e1)
+		consume(";")
+		e1 = expr()
+	}
+	return s1, e1
+}
+
+func forHeaders() (Stmt, Expr, Stmt) {
+	s1 := Stmt(nil)
+	e1 := Expr(nil)
+	s2 := Stmt(nil)
+	// No options.
+	if next("{") {
+		return s1, e1, s2
+	}
+	// Condition.
+	e1 = expr()
+	// For clause ([init] ; [cond] ; [post]).
+	if !next("{") {
+		s1 = simpleStmt(e1)
+		consume(";") // No semi colon when e1 is Empty.
+		e1 = expr()
+	}
+	if !next("{") {
+		s2 = simpleStmt(expr())
+		consume(";") // No semi colon when expr() is Empty.
+	}
+	return s1, e1, s2
 }
 
 func program() Program {
@@ -205,40 +287,6 @@ func stmt() Stmt {
 	}
 
 	return simpleStmt(expr())
-}
-
-func ifHeaders() (Stmt, Expr) {
-	s1 := Stmt(nil)
-	e1 := expr()
-	if !next("{") {
-		s1 = simpleStmt(e1)
-		consume(";")
-		e1 = expr()
-	}
-	return s1, e1
-}
-
-func forHeaders() (Stmt, Expr, Stmt) {
-	s1 := Stmt(nil)
-	e1 := Expr(nil)
-	s2 := Stmt(nil)
-	// No options.
-	if next("{") {
-		return s1, e1, s2
-	}
-	// Condition.
-	e1 = expr()
-	// For clause ([init] ; [cond] ; [post]).
-	if !next("{") {
-		s1 = simpleStmt(e1)
-		consume(";") // No semi colon when e1 is Empty.
-		e1 = expr()
-	}
-	if !next("{") {
-		s2 = simpleStmt(expr())
-		consume(";") // No semi colon when expr() is Empty.
-	}
-	return s1, e1, s2
 }
 
 func simpleStmt(exprN Expr) Stmt {
@@ -371,44 +419,7 @@ func primary() Expr {
 	return n
 }
 
-func funcArgs() []Expr {
-	args := make([]Expr, 0)
-	if consume(")") {
-		return args
-	}
-
-	args = append(args, expr())
-	for consume(",") {
-		args = append(args, expr())
-	}
-	assert(")")
-	return args
-}
-
-func funcParams() []Var {
-	params := make([]Var, 0)
-	if next(")") {
-		return params
-	}
-
-	for {
-		tok := consumeIdent()
-		if tok == nil {
-			panic("Expect an identifier inside function parameters.")
-		}
-
-		v := Var{tok.str, varOffset}
-		varOffset += 8
-		tmpLocals = append(tmpLocals, v)
-		params = append(params, v)
-
-		if !consume(",") {
-			break
-		}
-	}
-	return params
-}
-
+// -------------------- Debug functions. --------------------
 func printNodes(funcs []Function) {
 	for i, f := range funcs {
 		fmt.Println("")
