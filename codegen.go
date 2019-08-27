@@ -11,9 +11,13 @@ var argreg = []string{"rdi", "rsi", "rdx", "rcx", "r8", "r9"}
 var funcname string
 
 func genAddr(node interface{}) {
-	if n, ok := node.(Var); ok {
+	switch n := node.(type) {
+	case Var:
 		fmt.Printf("  lea rax, [rbp-%d]\n", n.offset)
 		fmt.Printf("  push rax\n")
+		return
+	case Deref:
+		gen(n.child)
 		return
 	}
 	panic("Not a lvalue")
@@ -50,10 +54,6 @@ func gen(node interface{}) {
 	case IntLit:
 		fmt.Printf("  push %d\n", n)
 		return
-	case ExprStmt:
-		gen(n.child)
-		fmt.Printf("  add rsp, 8\n") // Throw away the result of an expression.
-		return
 	case Var:
 		genAddr(n)
 		load()
@@ -63,10 +63,22 @@ func gen(node interface{}) {
 		gen(n.rhs)
 		store()
 		return
+	case Addr:
+		genAddr(n.child)
+		return
+	case Deref:
+		gen(n.child)
+		load()
+		return
 	case Block:
 		for _, c := range n.children {
 			gen(c)
 		}
+		return
+	case ExprStmt:
+		gen(n.child)
+		// Throw away the result of an expression.
+		fmt.Printf("  add rsp, 8\n")
 		return
 	case If:
 		seq := labelseq

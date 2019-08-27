@@ -46,6 +46,8 @@ type Unary struct {
 
 type Return Unary
 type ExprStmt Unary
+type Addr Unary
+type Deref Unary
 
 type Block struct {
 	children []Stmt
@@ -77,6 +79,8 @@ type IntLit int
 // Expressions.
 func (FuncCall) isExpr() {}
 func (Binary) isExpr()   {}
+func (Addr) isExpr()     {}
+func (Deref) isExpr()    {}
 func (Var) isExpr()      {}
 func (IntLit) isExpr()   {}
 func (Empty) isExpr()    {}
@@ -328,6 +332,10 @@ func unary() Expr {
 		return unary()
 	} else if consume("-") {
 		return Binary{"-", IntLit(0), unary()} // -val = 0 - val
+	} else if consume("&") {
+		return Addr{unary()}
+	} else if consume("*") {
+		return Deref{unary()}
 	}
 	return primary()
 }
@@ -403,9 +411,11 @@ func funcParams() []Var {
 
 func printNodes(funcs []Function) {
 	for i, f := range funcs {
-		fmt.Println("[Function]:", i, f.name)
+		fmt.Println("")
+		fmt.Println("[Function]", i, f.name)
 		for i, s := range f.stmts {
-			fmt.Println("[Print Node] node:", i)
+			fmt.Println("")
+			fmt.Println("[Statements]", i)
 			printNode(s, 0)
 		}
 		fmt.Println("========================")
@@ -419,15 +429,30 @@ func printNode(node interface{}, dep int) {
 	}
 
 	switch n := node.(type) {
+	case Empty:
+		fmt.Printf("Empty dep: %d\n", dep)
 	case IntLit:
-		fmt.Printf("INT dep: %d, val: %d\n", dep, n)
+		fmt.Printf("IntLit dep: %d, val: %d\n", dep, n)
 	case Var:
-		fmt.Printf("VAR dep: %d, name: %s, offset: %d, addr: %p\n", dep, n.name, n.offset, &n)
+		fmt.Printf("Var dep: %d, name: %s, offset: %d, addr: %p\n", dep, n.name, n.offset, &n)
+	case Assign:
+		fmt.Printf("Assign dep: %d\n", dep)
+		printNode(n.lhs, dep+1)
+		printNode(n.rhs, dep+1)
+	case Addr:
+		fmt.Printf("Addr dep: %d\n", dep)
+		printNode(n.child, dep+1)
+	case Deref:
+		fmt.Printf("Deref dep: %d\n", dep)
+		printNode(n.child, dep+1)
 	case Block:
-		fmt.Printf("BLOCK dep: %d\n", dep)
+		fmt.Printf("Block dep: %d\n", dep)
 		for _, c := range n.children {
 			printNode(c, dep)
 		}
+	case ExprStmt:
+		fmt.Printf("ExprStmt dep: %d\n", dep)
+		printNode(n.child, dep+1)
 	case If:
 		fmt.Printf("If dep: %d\n", dep, n)
 		printNode(n.init, dep)
@@ -435,23 +460,21 @@ func printNode(node interface{}, dep int) {
 		printNode(n.then, dep)
 		printNode(n.els, dep)
 	case For:
-		fmt.Printf("FOR dep: %d %#v\n", dep, n)
+		fmt.Printf("For dep: %d %#v\n", dep, n)
 		printNode(n.init, dep)
 		printNode(n.cond, dep)
 		printNode(n.post, dep)
 		printNode(n.then, dep)
 	case Return:
-		fmt.Printf("RETURN dep: %d %#v\n", dep, n)
+		fmt.Printf("Return dep: %d %#v\n", dep, n)
 		printNode(n.child, dep+1)
-	case ExprStmt:
-		fmt.Printf("ExprStmt dep: %d\n", dep)
-		printNode(n.child, dep+1)
+	case FuncCall:
+		fmt.Printf("FuncCall dep: %d\n", dep)
+		for _, arg := range n.args {
+			printNode(arg, dep+1)
+		}
 	case Binary:
-		fmt.Printf("BINARY dep: %d\n", dep)
-		printNode(n.lhs, dep+1)
-		printNode(n.rhs, dep+1)
-	case Assign:
-		fmt.Printf("ASSIGN dep: %d\n", dep)
+		fmt.Printf("Binary dep: %d\n", dep)
 		printNode(n.lhs, dep+1)
 		printNode(n.rhs, dep+1)
 	}

@@ -121,4 +121,17 @@ assert 7 'func main() { return add2(3,4); } func add2(x,y) { return x+y; }'
 assert 1 'func main() { return sub2(4,3); } func sub2(x,y) { return x-y; }'
 assert 55 'func main() { return fib(9); } func fib(x) { if x<=1 { return 1; } return fib(x-1) + fib(x-2); }'
 
+echo
+echo 'pointers'
+echo
+assert 3 'func main() { x=3; return *&x; }'
+assert 3 'func main() { x=3; y=&x; z=&y; return **z; }'
+assert 5 'func main() { x=3; y=&x; *y=5; return x; }'
+
+# Go doesn't support address operations, but should work well.
+#assert 5 'func main() { x=3; y=5; return *(&x+8); }'
+#assert 3 'func main() { x=3; y=5; return *(&y-8); }'
+#assert 7 'func main() { x=3; y=5; *(&x+8)=7; return y; }'
+#assert 7 'func main() { x=3; y=5; *(&y-8)=7; return x; }'
+
 echo OK
