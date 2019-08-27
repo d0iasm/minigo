@@ -115,9 +115,9 @@ func (Deref) isExpr()    {}
 func (IntLit) isExpr()   {}
 func (Empty) isExpr()    {}
 
-func findVar(tok Token) *Var {
+func findVar(name string) *Var {
 	for _, v := range tmpLocals {
-		if v.name == tok.str {
+		if v.name == name {
 			return &v
 		}
 	}
@@ -146,7 +146,7 @@ func assert(op string) {
 		tokens = tokens[1:]
 		return
 	}
-	panic(fmt.Sprintf("tokens: %s\n[Error] expected %s but got %s\n", tokens, op, tokens[0].str))
+	panic(fmt.Sprintf("tokens: %s\nExpected %s but got %s\n", tokens, op, tokens[0].str))
 }
 
 func next(op string) bool {
@@ -176,7 +176,7 @@ func funcParams() []Var {
 	for {
 		tok := consumeIdent()
 		if tok == nil {
-			panic("Expect an identifier inside function parameters.")
+			panic(fmt.Sprintf("tokens: %s\nExpected an identifier inside function parameters but got %#v\n", tokens, tok))
 		}
 
 		v := Var{tok.str, varOffset}
@@ -241,7 +241,7 @@ func function() Function {
 	assert("func")
 	tok := consumeIdent()
 	if tok == nil {
-		panic("Expect an identifier after 'func' keyword.")
+		panic(fmt.Sprintf("tokens: %s\nExpected an identifier after 'func' keyword but got %#v\n", tokens, tok))
 	}
 	name := tok.str
 	assert("(")
@@ -309,11 +309,25 @@ func simpleStmt(exprN Expr) Stmt {
 	// Identifier declaration.
 	if consume(":=") {
 		v := exprN.(Var)
+
+		varp := findVar(v.name)
+		if varp != nil {
+			panic(fmt.Sprintf("%s is already declared. No new variables on left side of := \n", v.name))
+		}
+		varOffset += 8
+		tmpLocals = append(tmpLocals, v)
 		return VarDecl{v, expr()}
 	}
 
 	// Assignment statement.
 	if consume("=") {
+		switch v := exprN.(type) {
+		case Var:
+			varp := findVar(v.name)
+			if varp == nil {
+				panic(fmt.Sprintf("Undefined: %s\n", v.name))
+			}
+		}
 		return Assign{exprN, expr()}
 	}
 
@@ -406,13 +420,14 @@ func unary() Expr {
 }
 
 func primary() Expr {
+	// Operand "()".
 	if consume("(") {
 		exprN := expr()
 		assert(")")
 		return exprN
 	}
 
-	// Identifiers.
+	// Identifier.
 	tok := consumeIdent()
 	if tok != nil {
 		// Function call.
@@ -420,17 +435,16 @@ func primary() Expr {
 			return FuncCall{tok.str, funcArgs()}
 		}
 
-		// Variables.
-		varp := findVar(*tok)
+		// Variable.
+		// Not register to `tmpLocals` yet.
+		varp := findVar(tok.str)
 		if varp == nil {
-			varp = &Var{tok.str, varOffset}
-			varOffset += 8
-			tmpLocals = append(tmpLocals, *varp)
+			return Var{tok.str, varOffset}
 		}
 		return *varp
 	}
 
-	// Integer literals.
+	// Integer literal.
 	n := IntLit(tokens[0].val)
 	tokens = tokens[1:]
 	return n
