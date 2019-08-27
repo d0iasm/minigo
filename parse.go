@@ -158,8 +158,6 @@ func stmt() Stmt {
 	// For statement.
 	if consume("for") {
 		init, cond, post := forHeaders()
-		//fmt.Printf("%#v \n%#v \n %#v \n", init, cond, post)
-		//fmt.Println("==============", tokens)
 		return For{init, cond, post, stmt()}
 	}
 
@@ -177,24 +175,6 @@ func ifHeaders() (Stmt, Expr) {
 	return s1, e1
 }
 
-/*
-func getForType() int {
-	if next("{") {
-		// No options.
-		return 0
-	}
-	tmp := tokens
-	expr()
-	tokens = tmp
-	if next("{") {
-		// Condition.
-		return 1
-	}
-	// For clause ([init] ; [cond] ; [post]).
-	return 3
-}
-*/
-
 func forHeaders() (Stmt, Expr, Stmt) {
 	s1 := Stmt(nil)
 	e1 := Expr(nil)
@@ -208,12 +188,12 @@ func forHeaders() (Stmt, Expr, Stmt) {
 	// For clause ([init] ; [cond] ; [post]).
 	if !next("{") {
 		s1 = simpleStmt(e1)
-		consume(";")
+		consume(";") // No semi colon when e1 is Empty.
 		e1 = expr()
 	}
 	if !next("{") {
 		s2 = simpleStmt(expr())
-		consume(";")
+		consume(";") // No semi colon when expr() is Empty.
 	}
 	return s1, e1, s2
 }
