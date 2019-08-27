@@ -58,9 +58,14 @@ func gen(node interface{}) {
 		genAddr(n)
 		load()
 		return
+	case VarDecl:
+		genAddr(n.ident)
+		gen(n.rval)
+		store()
+		return
 	case Assign:
-		genAddr(n.lhs)
-		gen(n.rhs)
+		genAddr(n.lval)
+		gen(n.rval)
 		store()
 		return
 	case Addr:

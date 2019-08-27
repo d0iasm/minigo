@@ -63,7 +63,7 @@ func startsReserved() string {
 		}
 	}
 
-	ops := []string{"==", "!=", "<=", ">="}
+	ops := []string{"==", "!=", "<=", ">=", ":="}
 	for _, op := range ops {
 		if strings.HasPrefix(in, op) {
 			return op

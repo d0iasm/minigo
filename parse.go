@@ -37,7 +37,13 @@ type Function struct {
 	stackSize int
 }
 
+type VarDecl struct { // It's also a statement.
+	ident Var
+	rval  Expr
+}
+
 func (Function) isDecl() {}
+func (VarDecl) isDecl()  {}
 
 // -------------------- Statements --------------------
 type Unary struct {
@@ -62,11 +68,16 @@ type For struct {
 	then Stmt
 }
 
-type Empty struct{}
-type Assign Binary
+type Assign struct {
+	lval Expr
+	rval Expr
+}
+
+type Empty struct{} // It's also an expression
 type Return Unary
 type ExprStmt Unary
 
+func (VarDecl) isStmt()  {}
 func (Assign) isStmt()   {}
 func (Return) isStmt()   {}
 func (ExprStmt) isStmt() {}
@@ -88,8 +99,8 @@ type FuncCall struct {
 }
 
 type Var struct {
-	name   string // Variable name
-	offset int    // Offset from RBP
+	name   string
+	offset int
 }
 
 type Addr Unary
@@ -295,9 +306,15 @@ func simpleStmt(exprN Expr) Stmt {
 		return Empty{}
 	}
 
+	// Identifier declaration.
+	if consume(":=") {
+		v := exprN.(Var)
+		return VarDecl{v, expr()}
+	}
+
 	// Assignment statement.
 	if consume("=") {
-		return Assign{"=", exprN, expr()}
+		return Assign{exprN, expr()}
 	}
 
 	// Expression statement.
@@ -446,10 +463,14 @@ func printNode(node interface{}, dep int) {
 		fmt.Printf("IntLit dep: %d, val: %d\n", dep, n)
 	case Var:
 		fmt.Printf("Var dep: %d, name: %s, offset: %d, addr: %p\n", dep, n.name, n.offset, &n)
+	case VarDecl:
+		fmt.Printf("VarDecl dep: %d\n", dep)
+		printNode(n.ident, dep+1)
+		printNode(n.rval, dep+1)
 	case Assign:
 		fmt.Printf("Assign dep: %d\n", dep)
-		printNode(n.lhs, dep+1)
-		printNode(n.rhs, dep+1)
+		printNode(n.lval, dep+1)
+		printNode(n.rval, dep+1)
 	case Addr:
 		fmt.Printf("Addr dep: %d\n", dep)
 		printNode(n.child, dep+1)

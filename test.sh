@@ -68,15 +68,15 @@ assert 0 'func main() { return 1>=2; }'
 echo
 echo 'assignments'
 echo
-assert 3 'func main() { a=3; return a; }'
-assert 8 'func main() { a=3; z=5; return a+z; }'
+assert 3 'func main() { a:=3; return a; }'
+assert 8 'func main() { a:=3; z:=5; return a+z; }'
 
 assert 1 'func main() { return 1; 2; 3; }'
 assert 2 'func main() { 1; return 2; 3; }'
 assert 3 'func main() { 1; 2; return 3; }'
 
-assert 3 'func main() { foo=3; return foo; }'
-assert 8 'func main() { foo123=3; bar=5; return foo123+bar; }'
+assert 3 'func main() { foo:=3; return foo; }'
+assert 8 'func main() { foo123:=3; bar:=5; return foo123+bar; }'
 
 echo
 echo 'blocks'
@@ -94,18 +94,18 @@ assert 2 'func main() { if 2-1 {return 2;} return 3; }'
 assert 3 'func main() { if 0 {return 2;} else if 1 {return 3;} }'
 assert 1 'func main() { if 1 { if 2 { return 1; } } }'
 assert 2  'func main() { if 1 { if 0 { return 1; } return 2; } }'
-assert 1  'func main() { if i=1; i>0 { return i; } }'
-assert 3  'func main() { if i=1; i>0 { i=i+2; return i; } }'
+assert 1  'func main() { if i:=1; i>0 { return i; } }'
+assert 3  'func main() { if i:=1; i>0 { i=i+2; return i; } }'
 
 echo
 echo 'for statements'
 echo
 assert 3 'func main() { for { return 3; } }'
-assert 10 'func main() { i=0; for i<10 { i=i+2; i=i-1; } return i; }'
-assert 10 'func main() { for i=0; i<10; i=i+1 { 1; } return i; }'
-assert 10 'func main() { i=0; for ; i<10; i=i+1; { i=i; } return i; }'
-assert 10 'func main() { for i=0; i<10; ; { i=i+1; } return i; }'
-assert 11 'func main() { for i=0; ; i=i+1; { if i>10 { return i; } } }'
+assert 10 'func main() { i:=0; for i<10 { i=i+2; i=i-1; } return i; }'
+assert 10 'func main() { for i:=0; i<10; i=i+1 { 1; } return i; }'
+assert 10 'func main() { i:=0; for ; i<10; i=i+1; { i=i; } return i; }'
+assert 10 'func main() { for i:=0; i<10; ; { i=i+1; } return i; }'
+assert 11 'func main() { for i:=0; ; i=i+1; { if i>10 { return i; } } }'
 
 echo
 echo 'function'
@@ -124,14 +124,16 @@ assert 55 'func main() { return fib(9); } func fib(x) { if x<=1 { return 1; } re
 echo
 echo 'pointers'
 echo
-assert 3 'func main() { x=3; return *&x; }'
-assert 3 'func main() { x=3; y=&x; z=&y; return **z; }'
-assert 5 'func main() { x=3; y=&x; *y=5; return x; }'
+assert 3 'func main() { x:=3; return *&x; }'
+assert 3 'func main() { x:=3; y:=&x; return *y; }'
+assert 3 'func main() { x:=3; y:=&x; z:=&y; return **z; }'
 
 # Go doesn't support address operations, but should work well.
-#assert 5 'func main() { x=3; y=5; return *(&x+8); }'
-#assert 3 'func main() { x=3; y=5; return *(&y-8); }'
-#assert 7 'func main() { x=3; y=5; *(&x+8)=7; return y; }'
-#assert 7 'func main() { x=3; y=5; *(&y-8)=7; return x; }'
+# assert 5 'func main() { x:=3; y:=x; *y=5; return x; }'
+
+#assert 5 'func main() { x:=3; y:=5; return *(&x+8); }'
+#assert 3 'func main() { x:=3; y:=5; return *(&y-8); }'
+#assert 7 'func main() { x:=3; y:=5; *(&x+8)=7; return y; }'
+#assert 7 'func main() { x:=3; y:=5; *(&y-8)=7; return x; }'
 
 echo OK
