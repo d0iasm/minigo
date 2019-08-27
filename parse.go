@@ -137,25 +137,19 @@ func program() Program {
 }
 
 func function() Function {
-	// Initialize for one function.
-	name := ""
-	params := make([]Var, 0)
-
+	// Initialize for a function.
 	varOffset = 8
 	tmpLocals = make([]Var, 0)
 
-	if consume("func") {
-		tok := consumeIdent()
-		if tok == nil {
-			panic("Expect an identifier after 'func' keyword.")
-		}
-		name = tok.str
-		//fmt.Println("================")
-		//fmt.Println(tokens)
-		assert("(")
-		params = funcParams()
-		assert(")")
+	assert("func")
+	tok := consumeIdent()
+	if tok == nil {
+		panic("Expect an identifier after 'func' keyword.")
 	}
+	name := tok.str
+	assert("(")
+	params := funcParams()
+	assert(")")
 
 	stmts := make([]Stmt, 0)
 	for len(tokens) > 0 && !next("func") {

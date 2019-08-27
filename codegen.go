@@ -5,6 +5,8 @@ import (
 )
 
 var labelseq int = 1
+
+// Comply with System V ABI.
 var argreg = []string{"rdi", "rsi", "rdx", "rcx", "r8", "r9"}
 var funcname string
 
@@ -123,7 +125,24 @@ func gen(node interface{}) {
 		for i := len(n.args) - 1; i >= 0; i-- {
 			fmt.Printf("  pop %s\n", argreg[i])
 		}
+
+		// We need to align RSP to a 16 byte boundary before
+		// calling a function because it is an ABI requirement.
+		// RAX is set to 0 for variadic function.
+		seq := labelseq
+		labelseq++
+		fmt.Printf("  mov rax, rsp\n")
+		fmt.Printf("  and rax, 15\n")
+		fmt.Printf("  jnz .Lcall%d\n", seq)
+		fmt.Printf("  mov rax, 0\n")
 		fmt.Printf("  call %s\n", n.name)
+		fmt.Printf("  jmp .Lend%d\n", seq)
+		fmt.Printf(".Lcall%d:\n", seq)
+		fmt.Printf("  sub rsp, 8\n")
+		fmt.Printf("  mov rax, 0\n")
+		fmt.Printf("  call %s\n", n.name)
+		fmt.Printf("  add rsp, 8\n")
+		fmt.Printf(".Lend%d:\n", seq)
 		fmt.Printf("  push rax\n")
 		return
 	}
