@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-var locals []Var
+var tmpLocals []Var
 var varOffset int = 8
 
 type Expr interface {
@@ -21,8 +21,9 @@ type Program struct {
 
 type Function struct {
 	name      string
-	stmts     []Stmt
+	params    []Var
 	locals    []Var
+	stmts     []Stmt
 	stackSize int
 }
 
@@ -90,7 +91,7 @@ func (For) isStmt()      {}
 func (Empty) isStmt()    {}
 
 func findVar(tok Token) *Var {
-	for _, v := range locals {
+	for _, v := range tmpLocals {
 		if v.name == tok.str {
 			return &v
 		}
@@ -138,8 +139,10 @@ func program() Program {
 func function() Function {
 	// Initialize for one function.
 	name := ""
+	params := make([]Var, 0)
+
 	varOffset = 8
-	locals = make([]Var, 0)
+	tmpLocals = make([]Var, 0)
 
 	if consume("func") {
 		tok := consumeIdent()
@@ -147,8 +150,10 @@ func function() Function {
 			panic("Expect an identifier after 'func' keyword.")
 		}
 		name = tok.str
-		// No sigunatures for now.
+		//fmt.Println("================")
+		//fmt.Println(tokens)
 		assert("(")
+		params = funcParams()
 		assert(")")
 	}
 
@@ -156,7 +161,7 @@ func function() Function {
 	for len(tokens) > 0 && !next("func") {
 		stmts = append(stmts, stmt())
 	}
-	return Function{name, stmts, locals, len(locals) * 8}
+	return Function{name, params, tmpLocals, stmts, len(tmpLocals) * 8}
 }
 
 func stmt() Stmt {
@@ -353,7 +358,7 @@ func primary() Expr {
 		if varp == nil {
 			varp = &Var{tok.str, varOffset}
 			varOffset += 8
-			locals = append(locals, *varp)
+			tmpLocals = append(tmpLocals, *varp)
 		}
 		return *varp
 	}
@@ -376,6 +381,30 @@ func funcArgs() []Expr {
 	}
 	assert(")")
 	return args
+}
+
+func funcParams() []Var {
+	params := make([]Var, 0)
+	if next(")") {
+		return params
+	}
+
+	for {
+		tok := consumeIdent()
+		if tok == nil {
+			panic("Expect an identifier inside function parameters.")
+		}
+
+		v := Var{tok.str, varOffset}
+		varOffset += 8
+		tmpLocals = append(tmpLocals, v)
+		params = append(params, v)
+
+		if !consume(",") {
+			break
+		}
+	}
+	return params
 }
 
 func printNodes(funcs []Function) {

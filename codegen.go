@@ -179,6 +179,11 @@ func codegen(prog Program) {
 		fmt.Printf("  mov rbp, rsp\n")
 		fmt.Printf("  sub rsp, %d\n", f.stackSize)
 
+		// Push parameters to the stack.
+		for i, p := range f.params {
+			fmt.Printf("  mov [rbp-%d], %s\n", p.offset, argreg[i])
+		}
+
 		// Emit code.
 		for _, s := range f.stmts {
 			gen(s)
