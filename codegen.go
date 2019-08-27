@@ -5,6 +5,7 @@ import (
 )
 
 var labelseq int = 1
+var argreg = []string{"rdi", "rsi", "rdx", "rcx", "r8", "r9"}
 
 func genAddr(node interface{}) {
 	if n, ok := node.(Var); ok {
@@ -115,6 +116,12 @@ func gen(node interface{}) {
 		fmt.Printf("  jmp .Lreturn\n")
 		return
 	case FuncCall:
+		for _, arg := range n.args {
+			gen(arg)
+		}
+		for i := len(n.args) - 1; i >= 0; i-- {
+			fmt.Printf("  pop %s\n", argreg[i])
+		}
 		fmt.Printf("  call %s\n", n.name)
 		fmt.Printf("  push rax\n")
 		return

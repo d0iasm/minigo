@@ -24,6 +24,7 @@ type Function struct {
 
 type FuncCall struct {
 	name string
+	args []Expr
 }
 
 type Binary struct {
@@ -327,9 +328,7 @@ func primary() Expr {
 	if tok != nil {
 		// Function call.
 		if consume("(") {
-			// No arguments now.
-			assert(")")
-			return FuncCall{tok.str}
+			return FuncCall{tok.str, funcArgs()}
 		}
 
 		// Variables.
@@ -346,6 +345,20 @@ func primary() Expr {
 	n := IntLit(tokens[0].val)
 	tokens = tokens[1:]
 	return n
+}
+
+func funcArgs() []Expr {
+	args := make([]Expr, 0)
+	if consume(")") {
+		return args
+	}
+
+	args = append(args, expr())
+	for consume(",") {
+		args = append(args, expr())
+	}
+	assert(")")
+	return args
 }
 
 func printNodes(stmts []Stmt) {
