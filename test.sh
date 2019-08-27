@@ -94,7 +94,8 @@ echo
 assert 3 'for { return 3; }'
 assert 10 'i=0; for i<10 { i=i+2; i=i-1; } return i;'
 assert 10 'for i=0; i<10; i=i+1 { 1; } return i;'
-# TODO: something wrong.
-# assert 10 'i=0; for ; i<10; i=i+1; { i=i; } return i;'
+assert 10 'i=0; for ; i<10; i=i+1; { i=i; } return i;'
+assert 10 'for i=0; i<10; ; { i=i+1; } return i;'
+assert 11 'for i=0; ; i=i+1; { if i>10 { return i; } }'
 
 echo OK

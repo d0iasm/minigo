@@ -50,7 +50,7 @@ type If struct {
 type For struct {
 	init Stmt
 	cond Expr
-	post Stmt // TODO: implement
+	post Stmt
 	then Stmt
 }
 
@@ -100,7 +100,7 @@ func assert(op string) {
 		tokens = tokens[1:]
 		return
 	}
-	panic(fmt.Sprintf("%s \n [Error] expected %s but got %s\n", tokens, op, tokens[0].str))
+	panic(fmt.Sprintf("tokens: %s\n[Error] expected %s but got %s\n", tokens, op, tokens[0].str))
 }
 
 func next(op string) bool {
@@ -158,6 +158,8 @@ func stmt() Stmt {
 	// For statement.
 	if consume("for") {
 		init, cond, post := forHeaders()
+		//fmt.Printf("%#v \n%#v \n %#v \n", init, cond, post)
+		//fmt.Println("==============", tokens)
 		return For{init, cond, post, stmt()}
 	}
 
@@ -169,7 +171,7 @@ func ifHeaders() (Stmt, Expr) {
 	e1 := expr()
 	if !next("{") {
 		s1 = simpleStmt(e1)
-		assert(";")
+		consume(";")
 		e1 = expr()
 	}
 	return s1, e1
@@ -206,11 +208,12 @@ func forHeaders() (Stmt, Expr, Stmt) {
 	// For clause ([init] ; [cond] ; [post]).
 	if !next("{") {
 		s1 = simpleStmt(e1)
-		assert(";")
+		consume(";")
 		e1 = expr()
 	}
 	if !next("{") {
-		s2 = ExprStmt{expr()}
+		s2 = simpleStmt(expr())
+		consume(";")
 	}
 	return s1, e1, s2
 }
