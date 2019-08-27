@@ -6,6 +6,7 @@ import (
 
 var labelseq int = 1
 var argreg = []string{"rdi", "rsi", "rdx", "rcx", "r8", "r9"}
+var funcname string
 
 func genAddr(node interface{}) {
 	if n, ok := node.(Var); ok {
@@ -113,7 +114,7 @@ func gen(node interface{}) {
 	case Return:
 		gen(n.child)
 		fmt.Printf("  pop rax\n")
-		fmt.Printf("  jmp .Lreturn\n")
+		fmt.Printf("  jmp .Lreturn.%s\n", funcname)
 		return
 	case FuncCall:
 		for _, arg := range n.args {
@@ -165,24 +166,28 @@ func gen(node interface{}) {
 	fmt.Printf("  push rax\n")
 }
 
-func codegen(funcs []Function) {
+func codegen(prog Program) {
 	fmt.Printf(".intel_syntax noprefix\n")
-	fmt.Printf(".global main\n")
-	fmt.Printf("main:\n")
 
-	// Prologue
-	fmt.Printf("  push rbp\n")
-	fmt.Printf("  mov rbp, rsp\n")
-	fmt.Printf("  sub rsp, 208\n")
+	for _, f := range prog.funcs {
+		funcname = f.name
+		fmt.Printf(".global %s\n", funcname)
+		fmt.Printf("%s:\n", funcname)
 
-	for _, f := range funcs {
+		// Prologue.
+		fmt.Printf("  push rbp\n")
+		fmt.Printf("  mov rbp, rsp\n")
+		fmt.Printf("  sub rsp, %d\n", f.stackSize)
+
+		// Emit code.
 		for _, s := range f.stmts {
 			gen(s)
 		}
-	}
 
-	fmt.Printf(".Lreturn:\n")
-	fmt.Printf("  mov rsp, rbp\n")
-	fmt.Printf("  pop rbp\n")
-	fmt.Printf("  ret\n")
+		// Epilogue.
+		fmt.Printf(".Lreturn.%s:\n", funcname)
+		fmt.Printf("  mov rsp, rbp\n")
+		fmt.Printf("  pop rbp\n")
+		fmt.Printf("  ret\n")
+	}
 }

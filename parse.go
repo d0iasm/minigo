@@ -15,6 +15,10 @@ type Stmt interface {
 	isStmt()
 }
 
+type Program struct {
+	funcs []Function
+}
+
 type Function struct {
 	name      string
 	stmts     []Stmt
@@ -123,23 +127,36 @@ func next(op string) bool {
 	return len(tokens) != 0 && tokens[0].str == op
 }
 
-func program() []Function {
-	return function()
+func program() Program {
+	funcs := make([]Function, 0)
+	for len(tokens) > 0 {
+		funcs = append(funcs, function())
+	}
+	return Program{funcs}
 }
 
-func function() []Function {
-	// Function body.
+func function() Function {
+	// Initialize for one function.
 	name := ""
+	varOffset = 8
+	locals = make([]Var, 0)
 
-	stmts := make([]Stmt, 0)
-	for len(tokens) > 0 {
-		stmts = append(stmts, stmt())
+	if consume("func") {
+		tok := consumeIdent()
+		if tok == nil {
+			panic("Expect an identifier after 'func' keyword.")
+		}
+		name = tok.str
+		// No sigunatures for now.
+		assert("(")
+		assert(")")
 	}
 
-	funcs := make([]Function, 0)
-	// Only support one function now.
-	funcs = append(funcs, Function{name, stmts, locals, 0})
-	return funcs
+	stmts := make([]Stmt, 0)
+	for len(tokens) > 0 && !next("func") {
+		stmts = append(stmts, stmt())
+	}
+	return Function{name, stmts, locals, len(locals) * 8}
 }
 
 func stmt() Stmt {
@@ -361,10 +378,14 @@ func funcArgs() []Expr {
 	return args
 }
 
-func printNodes(stmts []Stmt) {
-	for i, s := range stmts {
-		fmt.Println("[Print Node] node:", i)
-		printNode(s, 0)
+func printNodes(funcs []Function) {
+	for i, f := range funcs {
+		fmt.Println("[Function]:", i, f.name)
+		for i, s := range f.stmts {
+			fmt.Println("[Print Node] node:", i)
+			printNode(s, 0)
+		}
+		fmt.Println("========================")
 	}
 }
 

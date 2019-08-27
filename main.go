@@ -29,16 +29,11 @@ func main() {
 		fmt.Println(tokens)
 	}
 
-	funcs := program()
+	prog := program()
 	if isDev {
-		printNodes(funcs[0].stmts)
-		fmt.Println("===============")
+		printNodes(prog.funcs)
 	}
 
-	for _, f := range funcs {
-		f.stackSize = len(f.locals) * 8
-	}
-
-	codegen(funcs)
+	codegen(prog)
 	return
 }
