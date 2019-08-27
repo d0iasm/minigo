@@ -16,9 +16,14 @@ type Stmt interface {
 }
 
 type Function struct {
+	name      string
 	stmts     []Stmt
 	locals    []Var
 	stackSize int
+}
+
+type FuncCall struct {
+	name string
 }
 
 type Binary struct {
@@ -64,10 +69,11 @@ type Empty struct{}
 type IntLit int
 
 // Expressions.
-func (Binary) isExpr() {}
-func (Var) isExpr()    {}
-func (IntLit) isExpr() {}
-func (Empty) isExpr()  {}
+func (FuncCall) isExpr() {}
+func (Binary) isExpr()   {}
+func (Var) isExpr()      {}
+func (IntLit) isExpr()   {}
+func (Empty) isExpr()    {}
 
 // Statements.
 func (Assign) isStmt()   {}
@@ -88,15 +94,24 @@ func findVar(tok Token) *Var {
 }
 
 func consume(op string) bool {
-	if len(tokens) != 0 && tokens[0].str == op {
+	if len(tokens) > 0 && tokens[0].str == op {
 		tokens = tokens[1:]
 		return true
 	}
 	return false
 }
 
+func consumeIdent() *Token {
+	if len(tokens) > 0 && tokens[0].kind == TK_IDENT {
+		tok := tokens[0]
+		tokens = tokens[1:]
+		return &tok
+	}
+	return nil
+}
+
 func assert(op string) {
-	if len(tokens) != 0 && tokens[0].str == op {
+	if len(tokens) > 0 && tokens[0].str == op {
 		tokens = tokens[1:]
 		return
 	}
@@ -108,14 +123,21 @@ func next(op string) bool {
 }
 
 func program() []Function {
+	return function()
+}
+
+func function() []Function {
 	// Function body.
+	name := ""
+
 	stmts := make([]Stmt, 0)
 	for len(tokens) > 0 {
 		stmts = append(stmts, stmt())
 	}
 
 	funcs := make([]Function, 0)
-	funcs = append(funcs, Function{stmts, locals, 0})
+	// Only support one function now.
+	funcs = append(funcs, Function{name, stmts, locals, 0})
 	return funcs
 }
 
@@ -300,19 +322,27 @@ func primary() Expr {
 		return exprN
 	}
 
-	// Identifiers
-	if tokens[0].kind == TK_IDENT {
-		varp := findVar(tokens[0])
+	// Identifiers.
+	tok := consumeIdent()
+	if tok != nil {
+		// Function call.
+		if consume("(") {
+			// No arguments now.
+			assert(")")
+			return FuncCall{tok.str}
+		}
+
+		// Variables.
+		varp := findVar(*tok)
 		if varp == nil {
-			varp = &Var{tokens[0].str, varOffset}
+			varp = &Var{tok.str, varOffset}
 			varOffset += 8
 			locals = append(locals, *varp)
 		}
-		tokens = tokens[1:]
 		return *varp
 	}
 
-	// Integer literals
+	// Integer literals.
 	n := IntLit(tokens[0].val)
 	tokens = tokens[1:]
 	return n

@@ -114,6 +114,10 @@ func gen(node interface{}) {
 		fmt.Printf("  pop rax\n")
 		fmt.Printf("  jmp .Lreturn\n")
 		return
+	case FuncCall:
+		fmt.Printf("  call %s\n", n.name)
+		fmt.Printf("  push rax\n")
+		return
 	}
 
 	n := node.(Binary)

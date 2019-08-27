@@ -1,10 +1,15 @@
+cat <<EOF | gcc -xc -c -o tmp2.o -
+int ret3() { return 3; }
+int ret5() { return 5; }
+EOF
+
 assert() {
   expected="$1"
   input="$2"
 
   go build main.go tokenize.go parse.go codegen.go
   ./main -in "$input" > tmp.s
-  gcc -static -o tmp tmp.s
+  gcc -static -o tmp tmp.s tmp2.o
   ./tmp
   actual="$?"
 
@@ -97,5 +102,11 @@ assert 10 'for i=0; i<10; i=i+1 { 1; } return i;'
 assert 10 'i=0; for ; i<10; i=i+1; { i=i; } return i;'
 assert 10 'for i=0; i<10; ; { i=i+1; } return i;'
 assert 11 'for i=0; ; i=i+1; { if i>10 { return i; } }'
+
+echo
+echo 'function'
+echo
+assert 3 'return ret3();'
+assert 5 'return ret5();'
 
 echo OK
