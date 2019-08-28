@@ -417,7 +417,7 @@ func unary() Expr {
 	if consume("+") {
 		return unary()
 	} else if consume("-") {
-		return Binary{"-", IntLit{0, &Type{None}}, unary()} // -val = 0 - val
+		return Binary{"-", IntLit{0, &Type{Int}}, unary()} // -val = 0 - val
 	} else if consume("&") {
 		return Addr{unary()}
 	} else if consume("*") {
@@ -452,7 +452,7 @@ func primary() Expr {
 	}
 
 	// Integer literal.
-	n := IntLit{tokens[0].val, &Type{None}}
+	n := IntLit{tokens[0].val, &Type{Int}}
 	tokens = tokens[1:]
 	return n
 }

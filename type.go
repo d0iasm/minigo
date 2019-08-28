@@ -14,7 +14,7 @@ const (
 )
 
 type Type struct {
-	ty TypeKind
+	kind TypeKind
 }
 
 func check(lty TypeKind, rty TypeKind) {
@@ -28,6 +28,9 @@ func addType(node interface{}) {
 	case Empty:
 		return
 	case IntLit:
+		if n.ty.kind == Int {
+			return
+		}
 		*n.ty = Type{Int}
 		return
 	case Var:
