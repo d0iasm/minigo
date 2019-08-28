@@ -146,6 +146,15 @@ func consumeIdent() *Token {
 	return nil
 }
 
+func consumeType() *Token {
+	if len(tokens) > 0 && tokens[0].kind == TK_TYPE {
+		tok := tokens[0]
+		tokens = tokens[1:]
+		return &tok
+	}
+	return nil
+}
+
 func assert(op string) {
 	if len(tokens) > 0 && tokens[0].str == op {
 		tokens = tokens[1:]
@@ -184,7 +193,12 @@ func funcParams() []Var {
 			panic(fmt.Sprintf("tokens: %s\nExpected an identifier inside function parameters but got %#v\n", tokens, tok))
 		}
 
-		v := Var{tok.str, varOffset, &Type{None}}
+		tokTy := consumeType()
+		if tokTy != nil && !supportType(tokTy.str) {
+			panic(fmt.Sprintf("Unsupported type %s\n", tokTy.str))
+		}
+
+		v := Var{tok.str, varOffset, &Type{tokTy.str}}
 		varOffset += 8
 		tmpLocals = append(tmpLocals, v)
 		params = append(params, v)
@@ -417,7 +431,7 @@ func unary() Expr {
 	if consume("+") {
 		return unary()
 	} else if consume("-") {
-		return Binary{"-", IntLit{0, &Type{Int}}, unary()} // -val = 0 - val
+		return Binary{"-", IntLit{0, &Type{"int"}}, unary()} // -val = 0 - val
 	} else if consume("&") {
 		return Addr{unary()}
 	} else if consume("*") {
@@ -446,13 +460,13 @@ func primary() Expr {
 		// Not register to `tmpLocals` yet.
 		varp := findVar(tok.str)
 		if varp == nil {
-			return Var{tok.str, varOffset, &Type{None}}
+			return Var{tok.str, varOffset, &Type{"none"}}
 		}
 		return *varp
 	}
 
 	// Integer literal.
-	n := IntLit{tokens[0].val, &Type{Int}}
+	n := IntLit{tokens[0].val, &Type{"int"}}
 	tokens = tokens[1:]
 	return n
 }

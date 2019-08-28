@@ -14,6 +14,7 @@ type TokenKind int
 const (
 	TK_RESERVED = iota // Keywords or punctuators
 	TK_IDENT           // Identifiers
+	TK_TYPE            // Types
 	TK_NUM             // Integer literals
 )
 
@@ -76,11 +77,28 @@ func startsReserved() string {
 	return ""
 }
 
+func startsType() string {
+	for _, t := range typeKinds {
+		if strings.HasPrefix(in, t) {
+			if len(t) == len(in) || !isAlnum(in[len(t)]) {
+				return t
+			}
+		}
+	}
+	return ""
+}
+
 func tokenize() []Token {
 	tokens := make([]Token, 0)
 	for len(in) > 0 {
 		if in[0] == ' ' {
 			in = in[1:]
+			continue
+		}
+		ty := startsType()
+		if len(ty) != 0 {
+			tokens = append(tokens, Token{TK_TYPE, -1, ty})
+			in = in[len(ty):]
 			continue
 		}
 		kw := startsReserved()

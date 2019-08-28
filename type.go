@@ -4,20 +4,22 @@ import (
 	"fmt"
 )
 
-type TypeKind int
-
-const (
-	None TypeKind = iota
-	Bool
-	Int
-	Uint
-)
+var typeKinds = []string{"none", "bool", "int", "uint"}
 
 type Type struct {
-	kind TypeKind
+	kind string
 }
 
-func check(lty TypeKind, rty TypeKind) {
+func supportType(s string) bool {
+	for _, t := range typeKinds {
+		if s == t {
+			return true
+		}
+	}
+	return false
+}
+
+func check(lty string, rty string) {
 	if lty != rty {
 		panic(fmt.Sprintf("Expected type of a left-side node %d, but got %d\n", rty, lty))
 	}
@@ -28,10 +30,10 @@ func addType(node interface{}) {
 	case Empty:
 		return
 	case IntLit:
-		if n.ty.kind == Int {
+		if n.ty.kind == "int" {
 			return
 		}
-		*n.ty = Type{Int}
+		*n.ty = Type{"int"}
 		return
 	case Var:
 		return
