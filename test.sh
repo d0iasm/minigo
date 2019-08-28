@@ -12,7 +12,7 @@ assert() {
   expected="$1"
   input="$2"
 
-  go build main.go tokenize.go parse.go codegen.go
+  go build main.go tokenize.go parse.go codegen.go type.go
   ./main -in "$input" > tmp.s
   gcc -static -o tmp tmp.s tmp2.o
   ./tmp

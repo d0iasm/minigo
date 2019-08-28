@@ -52,7 +52,7 @@ func gen(node interface{}) {
 	case Empty:
 		return
 	case IntLit:
-		fmt.Printf("  push %d\n", n)
+		fmt.Printf("  push %d\n", n.val)
 		return
 	case Var:
 		genAddr(n)

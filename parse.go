@@ -46,7 +46,7 @@ func (Function) isDecl() {}
 func (VarDecl) isDecl()  {}
 
 // -------------------- Statements --------------------
-type Unary struct {
+type Unary struct { // It's also an expression.
 	child Expr
 }
 
@@ -101,11 +101,16 @@ type FuncCall struct {
 type Var struct {
 	name   string
 	offset int
+	ty     *Type
+}
+
+type IntLit struct {
+	val int
+	ty  *Type
 }
 
 type Addr Unary
 type Deref Unary
-type IntLit int
 
 func (Binary) isExpr()   {}
 func (FuncCall) isExpr() {}
@@ -179,7 +184,7 @@ func funcParams() []Var {
 			panic(fmt.Sprintf("tokens: %s\nExpected an identifier inside function parameters but got %#v\n", tokens, tok))
 		}
 
-		v := Var{tok.str, varOffset}
+		v := Var{tok.str, varOffset, &Type{None}}
 		varOffset += 8
 		tmpLocals = append(tmpLocals, v)
 		params = append(params, v)
@@ -250,7 +255,9 @@ func function() Function {
 
 	stmts := make([]Stmt, 0)
 	for len(tokens) > 0 && !next("func") {
-		stmts = append(stmts, stmt())
+		s := stmt()
+		addType(s)
+		stmts = append(stmts, s)
 	}
 	return Function{name, params, tmpLocals, stmts, len(tmpLocals) * 8}
 }
@@ -410,7 +417,7 @@ func unary() Expr {
 	if consume("+") {
 		return unary()
 	} else if consume("-") {
-		return Binary{"-", IntLit(0), unary()} // -val = 0 - val
+		return Binary{"-", IntLit{0, &Type{None}}, unary()} // -val = 0 - val
 	} else if consume("&") {
 		return Addr{unary()}
 	} else if consume("*") {
@@ -439,13 +446,13 @@ func primary() Expr {
 		// Not register to `tmpLocals` yet.
 		varp := findVar(tok.str)
 		if varp == nil {
-			return Var{tok.str, varOffset}
+			return Var{tok.str, varOffset, &Type{None}}
 		}
 		return *varp
 	}
 
 	// Integer literal.
-	n := IntLit(tokens[0].val)
+	n := IntLit{tokens[0].val, &Type{None}}
 	tokens = tokens[1:]
 	return n
 }
@@ -474,9 +481,9 @@ func printNode(node interface{}, dep int) {
 	case Empty:
 		fmt.Printf("Empty dep: %d\n", dep)
 	case IntLit:
-		fmt.Printf("IntLit dep: %d, val: %d\n", dep, n)
+		fmt.Printf("IntLit dep: %d, val: %d, type: %#v\n", dep, n.val, n.ty)
 	case Var:
-		fmt.Printf("Var dep: %d, name: %s, offset: %d, addr: %p\n", dep, n.name, n.offset, &n)
+		fmt.Printf("Var dep: %d, name: %s, offset: %d, addr: %p, type: %d\n", dep, n.name, n.offset, &n, n.ty)
 	case VarDecl:
 		fmt.Printf("VarDecl dep: %d\n", dep)
 		printNode(n.ident, dep+1)
