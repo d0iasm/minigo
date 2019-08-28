@@ -198,7 +198,7 @@ func funcParams() []Var {
 			panic(fmt.Sprintf("Unsupported type %s\n", tokTy.str))
 		}
 
-		v := Var{tok.str, varOffset, &Type{tokTy.str}}
+		v := Var{tok.str, varOffset, &Type{tokTy.str, -1}}
 		varOffset += 8
 		tmpLocals = append(tmpLocals, v)
 		params = append(params, v)
@@ -431,7 +431,7 @@ func unary() Expr {
 	if consume("+") {
 		return unary()
 	} else if consume("-") {
-		return Binary{"-", IntLit{0, &Type{"int"}}, unary()} // -val = 0 - val
+		return Binary{"-", IntLit{0, &Type{"int", -1}}, unary()} // -val = 0 - val
 	} else if consume("&") {
 		return Addr{unary()}
 	} else if consume("*") {
@@ -460,13 +460,13 @@ func primary() Expr {
 		// Not register to `tmpLocals` yet.
 		varp := findVar(tok.str)
 		if varp == nil {
-			return Var{tok.str, varOffset, &Type{"none"}}
+			return Var{tok.str, varOffset, &Type{"none", -1}}
 		}
 		return *varp
 	}
 
 	// Integer literal.
-	n := IntLit{tokens[0].val, &Type{"int"}}
+	n := IntLit{tokens[0].val, &Type{"int", -1}}
 	tokens = tokens[1:]
 	return n
 }

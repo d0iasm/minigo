@@ -7,7 +7,8 @@ import (
 var typeKinds = []string{"none", "bool", "int", "uint"}
 
 type Type struct {
-	kind string
+	kind   string
+	length int
 }
 
 func supportType(s string) bool {
@@ -33,7 +34,7 @@ func addType(node interface{}) {
 		if n.ty.kind == "int" {
 			return
 		}
-		*n.ty = Type{"int"}
+		*n.ty = Type{"int", -1}
 		return
 	case Var:
 		return
