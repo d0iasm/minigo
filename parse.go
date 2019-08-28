@@ -129,6 +129,23 @@ func findVar(name string) *Var {
 	return nil
 }
 
+func varSpec() Var {
+	tokId := consumeToken(TK_IDENT)
+	if tokId == nil {
+		panic(fmt.Sprintf("Expected an identifier but got %#v\n", tokId))
+	}
+
+	tokTy := consumeToken(TK_TYPE)
+	if tokTy == nil {
+		return Var{tokId.str, varOffset, &Type{"none", -1}}
+	}
+
+	if !supportType(tokTy.str) {
+		panic(fmt.Sprintf("Unsupported type %s\n", tokTy.str))
+	}
+	return Var{tokId.str, varOffset, &Type{tokTy.str, -1}}
+}
+
 func consume(op string) bool {
 	if len(tokens) > 0 && tokens[0].str == op {
 		tokens = tokens[1:]
@@ -137,17 +154,8 @@ func consume(op string) bool {
 	return false
 }
 
-func consumeIdent() *Token {
-	if len(tokens) > 0 && tokens[0].kind == TK_IDENT {
-		tok := tokens[0]
-		tokens = tokens[1:]
-		return &tok
-	}
-	return nil
-}
-
-func consumeType() *Token {
-	if len(tokens) > 0 && tokens[0].kind == TK_TYPE {
+func consumeToken(tk TokenKind) *Token {
+	if len(tokens) > 0 && tokens[0].kind == tk {
 		tok := tokens[0]
 		tokens = tokens[1:]
 		return &tok
@@ -188,17 +196,7 @@ func funcParams() []Var {
 	}
 
 	for {
-		tok := consumeIdent()
-		if tok == nil {
-			panic(fmt.Sprintf("tokens: %s\nExpected an identifier inside function parameters but got %#v\n", tokens, tok))
-		}
-
-		tokTy := consumeType()
-		if tokTy != nil && !supportType(tokTy.str) {
-			panic(fmt.Sprintf("Unsupported type %s\n", tokTy.str))
-		}
-
-		v := Var{tok.str, varOffset, &Type{tokTy.str, -1}}
+		v := varSpec()
 		varOffset += 8
 		tmpLocals = append(tmpLocals, v)
 		params = append(params, v)
@@ -258,7 +256,7 @@ func function() Function {
 	tmpLocals = make([]Var, 0)
 
 	assert("func")
-	tok := consumeIdent()
+	tok := consumeToken(TK_IDENT)
 	if tok == nil {
 		panic(fmt.Sprintf("tokens: %s\nExpected an identifier after 'func' keyword but got %#v\n", tokens, tok))
 	}
@@ -277,6 +275,23 @@ func function() Function {
 }
 
 func stmt() Stmt {
+	// Var declaration.
+	if consume("var") {
+		v := varSpec()
+
+		varp := findVar(v.name)
+		if varp != nil {
+			panic(fmt.Sprintf("%s is already declared. No new variables\n", v.name))
+		}
+		varOffset += 8
+		tmpLocals = append(tmpLocals, v)
+
+		if consume("=") {
+			return VarDecl{v, expr()}
+		}
+		return VarDecl{v, Empty{}}
+	}
+
 	// Return statement.
 	if consume("return") {
 		stmtN := Return{expr()}
@@ -449,7 +464,7 @@ func primary() Expr {
 	}
 
 	// Identifier.
-	tok := consumeIdent()
+	tok := consumeToken(TK_IDENT)
 	if tok != nil {
 		// Function call.
 		if consume("(") {

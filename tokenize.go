@@ -55,7 +55,7 @@ func isAlnum(b byte) bool {
 }
 
 func startsReserved() string {
-	keywords := []string{"return", "if", "else", "for", "func"}
+	keywords := []string{"return", "if", "else", "for", "func", "var"}
 	for _, kw := range keywords {
 		if strings.HasPrefix(in, kw) {
 			if len(kw) == len(in) || !isAlnum(in[len(kw)]) {
@@ -71,7 +71,7 @@ func startsReserved() string {
 		}
 	}
 
-	if strings.Contains("+-*/()<>;={},&", in[0:1]) {
+	if strings.Contains("+-*/()<>;={},&[]", in[0:1]) {
 		return in[0:1]
 	}
 	return ""
