@@ -37,13 +37,7 @@ type Function struct {
 	stackSize int
 }
 
-type VarDecl struct { // It's also a statement.
-	ident Var
-	rval  Expr
-}
-
 func (Function) isDecl() {}
-func (VarDecl) isDecl()  {}
 
 // -------------------- Statements --------------------
 type Unary struct { // It's also an expression.
@@ -77,7 +71,6 @@ type Empty struct{} // It's also an expression
 type Return Unary
 type ExprStmt Unary
 
-func (VarDecl) isStmt()  {}
 func (Assign) isStmt()   {}
 func (Return) isStmt()   {}
 func (ExprStmt) isStmt() {}
@@ -143,6 +136,7 @@ func varSpec() Var {
 	if !supportType(tokTy.str) {
 		panic(fmt.Sprintf("Unsupported type %s\n", tokTy.str))
 	}
+
 	return Var{tokId.str, varOffset, &Type{tokTy.str, -1}}
 }
 
@@ -287,9 +281,9 @@ func stmt() Stmt {
 		tmpLocals = append(tmpLocals, v)
 
 		if consume("=") {
-			return VarDecl{v, expr()}
+			return Assign{v, expr()}
 		}
-		return VarDecl{v, Empty{}}
+		return Empty{}
 	}
 
 	// Return statement.
@@ -352,7 +346,7 @@ func simpleStmt(exprN Expr) Stmt {
 		}
 		varOffset += 8
 		tmpLocals = append(tmpLocals, v)
-		return VarDecl{v, expr()}
+		return Assign{v, expr()}
 	}
 
 	// Assignment statement.
@@ -513,10 +507,6 @@ func printNode(node interface{}, dep int) {
 		fmt.Printf("IntLit dep: %d, val: %d, type: %#v\n", dep, n.val, n.ty)
 	case Var:
 		fmt.Printf("Var dep: %d, name: %s, offset: %d, addr: %p, type: %d\n", dep, n.name, n.offset, &n, n.ty)
-	case VarDecl:
-		fmt.Printf("VarDecl dep: %d\n", dep)
-		printNode(n.ident, dep+1)
-		printNode(n.rval, dep+1)
 	case Assign:
 		fmt.Printf("Assign dep: %d\n", dep)
 		printNode(n.lval, dep+1)

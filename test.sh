@@ -136,17 +136,10 @@ assert 2 'func main() { x:=2; return x; }'
 assert 2 'func main() { x:=5; y:=3; return x-y; }'
 
 assert 42 'func main() { var x int; x=42; return x; }'
-assert 3 'func main() { var x int = 3; return x; }'
+assert 3 'func main() { var x int=3; return x; }'
 assert 3 'func main() { var x int=5; var y int=2; return x-y; }'
 assert 4 'func main() { var x int; x=3; return x+1; }'
-
-# Seems to work well but gets "Segmentation fault (core dumped)".
-#assert 4 'func main() { var x int; x=3; var y=1; return x+y; }'
-#assert 4 'func main() { var x int; x=3; y:=1; return x+y; }'
-
-echo
-echo 'arrays'
-echo
-#assert 3 'func main() { [2]int x; x}'
+assert 4 'func main() { var x int; x=3; var y=1; return x+y; }'
+assert 4 'func main() { var x int; x=3; y:=1; return x+y; }'
 
 echo OK

@@ -38,10 +38,6 @@ func addType(node interface{}) {
 		return
 	case Var:
 		return
-	case VarDecl:
-		addType(n.ident)
-		addType(n.rval)
-		return
 	case Assign:
 		addType(n.lval)
 		addType(n.rval)
