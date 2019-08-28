@@ -25,8 +25,26 @@ func check(lty TypeKind, rty TypeKind) {
 
 func addType(node interface{}) {
 	switch n := node.(type) {
+	case Empty:
+		return
 	case IntLit:
 		*n.ty = Type{Int}
+		return
+	case Var:
+		return
+	case VarDecl:
+		addType(n.ident)
+		addType(n.rval)
+		return
+	case Assign:
+		addType(n.lval)
+		addType(n.rval)
+		return
+	case Addr:
+		addType(n.child)
+		return
+	case Deref:
+		addType(n.child)
 		return
 	case Block:
 		for _, c := range n.children {
@@ -65,8 +83,6 @@ func addType(node interface{}) {
 		for _, arg := range n.args {
 			addType(arg)
 		}
-		return
-	default:
 		return
 	}
 
