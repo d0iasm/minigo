@@ -63,9 +63,14 @@ func gen(node interface{}) {
 		load()
 		return
 	case Assign:
-		genAddr(n.lval)
-		gen(n.rval)
-		store()
+		if len(n.lvals) != len(n.rvals) {
+			panic(fmt.Sprintf("Not same length %d != %d", len(n.lvals), len(n.rvals)))
+		}
+		for i := range n.lvals {
+			genAddr(n.lvals[i])
+			gen(n.rvals[i])
+			store()
+		}
 		return
 	case Addr:
 		genAddr(n.child)

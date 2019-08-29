@@ -63,8 +63,8 @@ type For struct {
 }
 
 type Assign struct {
-	lval Expr
-	rval Expr
+	lvals []Expr
+	rvals []Expr
 }
 
 type Empty struct{} // It's also an expression
@@ -188,6 +188,18 @@ func assert(op string) {
 	panic(fmt.Sprintf("tokens: %s\nExpected %s but got %s\n", tokens, op, tokens[0].str))
 }
 
+func assertType() string {
+	tok := consumeToken(TK_TYPE)
+	if tok == nil {
+		panic(fmt.Sprintf("Expected TYPE but got %#v\n", tokens[0]))
+	}
+
+	if !supportType(tok.str) {
+		panic(fmt.Sprintf("Unsupported type %s\n", tok.str))
+	}
+	return tok.str
+}
+
 func next(op string) bool {
 	return len(tokens) != 0 && tokens[0].str == op
 }
@@ -276,7 +288,7 @@ func function() Function {
 	assert("func")
 	tok := consumeToken(TK_IDENT)
 	if tok == nil {
-		panic(fmt.Sprintf("tokens: %s\nExpected an identifier after 'func' keyword but got %#v\n", tokens, tok))
+		panic(fmt.Sprintf("Expected an identifier after 'func' keyword but got %#v\n", tok))
 	}
 	name := tok.str
 	assert("(")
@@ -306,7 +318,27 @@ func stmt() Stmt {
 		tmpLocals = append(tmpLocals, v)
 
 		if consume("=") {
-			return Assign{v, expr()}
+			length := arrayLength()
+			if length == -1 {
+				return Assign{[]Expr{v}, []Expr{expr()}}
+			}
+
+			// Multiple elements in an array.
+			_ = assertType()
+			assert("{")
+
+			v.ty.length = length
+			varOffset += ((v.ty.length - 1) * 8)
+
+			lvals := make([]Expr, length)
+			rvals := make([]Expr, length)
+			for i := 0; i < length; i++ {
+				lvals[i] = ArrayRef{v, i}
+				rvals[i] = expr()
+				consume(",")
+			}
+			assert("}")
+			return Assign{lvals, rvals}
 		}
 		// Return Empty struct because of no assignment.
 		return Empty{}
@@ -371,10 +403,31 @@ func simpleStmt(exprN Expr) Stmt {
 		if varp != nil {
 			panic(fmt.Sprintf("%s is already declared. No new variables on left side of := \n", v.name))
 		}
-		varOffset += 8
+
+		varOffset += (v.ty.length * 8)
 		tmpLocals = append(tmpLocals, v)
 
-		return Assign{v, expr()}
+		length := arrayLength()
+		if length == -1 {
+			return Assign{[]Expr{v}, []Expr{expr()}}
+		}
+
+		// Multiple elements in an array.
+		_ = assertType()
+		assert("{")
+
+		v.ty.length = length
+		varOffset += ((v.ty.length - 1) * 8)
+
+		lvals := make([]Expr, length)
+		rvals := make([]Expr, length)
+		for i := 0; i < length; i++ {
+			lvals[i] = ArrayRef{v, i}
+			rvals[i] = expr()
+			consume(",")
+		}
+		assert("}")
+		return Assign{lvals, rvals}
 	}
 
 	// Assignment statement.
@@ -386,7 +439,7 @@ func simpleStmt(exprN Expr) Stmt {
 				panic(fmt.Sprintf("Undefined: %s\n", v.name))
 			}
 		}
-		return Assign{exprN, expr()}
+		return Assign{[]Expr{exprN}, []Expr{expr()}}
 	}
 
 	// Expression statement.
@@ -554,8 +607,10 @@ func printNode(node interface{}, dep int) {
 		fmt.Printf("Var dep: %d, name: %s, offset: %d, addr: %p, type: %d\n", dep, n.name, n.offset, &n, n.ty)
 	case Assign:
 		fmt.Printf("Assign dep: %d\n", dep)
-		printNode(n.lval, dep+1)
-		printNode(n.rval, dep+1)
+		for i := range n.lvals {
+			printNode(n.lvals[i], dep+1)
+			printNode(n.rvals[i], dep+1)
+		}
 	case Addr:
 		fmt.Printf("Addr dep: %d\n", dep)
 		printNode(n.child, dep+1)

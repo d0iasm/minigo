@@ -39,8 +39,13 @@ func addType(node interface{}) {
 	case Var:
 		return
 	case Assign:
-		addType(n.lval)
-		addType(n.rval)
+		if len(n.lvals) != len(n.rvals) {
+			panic(fmt.Sprintf("Not same length %d != %d", len(n.lvals), len(n.rvals)))
+		}
+		for i := range n.lvals {
+			addType(n.lvals[i])
+			addType(n.rvals[i])
+		}
 		return
 	case Addr:
 		addType(n.child)

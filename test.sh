@@ -148,8 +148,8 @@ echo
 assert 1 'func main() { var x [2]int; x[0]=1; x[1]=2; return x[0]; }'
 assert 2 'func main() { var x [2]int; x[0]=1; x[1]=2; return x[1]; }'
 assert 3 'func main() { var x [2]int; x[0]=2; x[1]=5; return x[1]-x[0]; }'
-#assert 2 'func main() { var x [2]int = [2]int{1, 2}; return x[1]; }'
-#assert 2 'func main() { x:={1, 2}; return x[1]; }'
+assert 2 'func main() { var x [2]int = [2]int{1, 2}; return x[1]; }'
+assert 3 'func main() { x:=[2]int{2, 5}; return x[1]-x[0]; }'
 
 # Should fail but work well for some reason.
 #assert 42 'func main() { var x[2]int; *x=42; return *x; }'
