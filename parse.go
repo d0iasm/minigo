@@ -324,18 +324,17 @@ func stmt() Stmt {
 			}
 
 			// Multiple elements in an array.
-			_ = assertType()
+			assertType()
 			assert("{")
 
 			v.ty.length = length
 			varOffset += ((v.ty.length - 1) * 8)
 
 			lvals := make([]Expr, length)
-			rvals := make([]Expr, length)
+			rvals := exprList()
+			// Expand left-side expressions.
 			for i := 0; i < length; i++ {
 				lvals[i] = ArrayRef{v, i}
-				rvals[i] = expr()
-				consume(",")
 			}
 			assert("}")
 			return Assign{lvals, rvals}
@@ -413,18 +412,17 @@ func simpleStmt(exprN Expr) Stmt {
 		}
 
 		// Multiple elements in an array.
-		_ = assertType()
+		assertType()
 		assert("{")
 
 		v.ty.length = length
 		varOffset += ((v.ty.length - 1) * 8)
 
 		lvals := make([]Expr, length)
-		rvals := make([]Expr, length)
+		rvals := exprList()
+		// Expand left-side expressions.
 		for i := 0; i < length; i++ {
 			lvals[i] = ArrayRef{v, i}
-			rvals[i] = expr()
-			consume(",")
 		}
 		assert("}")
 		return Assign{lvals, rvals}
@@ -444,6 +442,15 @@ func simpleStmt(exprN Expr) Stmt {
 
 	// Expression statement.
 	return ExprStmt{exprN}
+}
+
+func exprList() []Expr {
+	exprs := make([]Expr, 0)
+	exprs = append(exprs, expr())
+	for consume(",") {
+		exprs = append(exprs, expr())
+	}
+	return exprs
 }
 
 func expr() Expr {
