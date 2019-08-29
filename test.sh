@@ -161,6 +161,7 @@ echo 'global variables'
 echo
 assert 3 'var a int64; func main() { a=3; return a; }'
 assert 5 'var a int64=5; func main() { return a; }'
+assert 12 'var a int64=2*6; func main() { return a; }'
 assert 3 'var a [3]int64=[3]int64{1,2,3}; func main() { return a[2]; }'
 
 echo OK
