@@ -156,4 +156,11 @@ assert 3 'func main() { x:=[2]int{2, 5}; return x[1]-x[0]; }'
 #assert 42 'func main() { var x[2]int; *(x+1)=42; return *(x+1); }'
 #assert 3 'func main() { var x[2]int; *x=1; *(x+1)=2; return *x + *(x+1); }'
 
+echo
+echo 'global variables'
+echo
+assert 3 'var a int; func main() { a=3; return a; }'
+#assert 5 'var a int=5; func main() { return a; }'
+#assert 3 'var a [3]int=[3]int{1,2,3}; func main() { return a[2]; }'
+
 echo OK

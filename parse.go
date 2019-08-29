@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+var globals []Var
 var tmpLocals []Var
 var varOffset int = 8
 
@@ -25,7 +26,8 @@ type Expr interface {
 
 // -------------------- Top level program --------------------
 type Program struct {
-	funcs []Function
+	globals []Var
+	funcs   []Function
 }
 
 // -------------------- Declarations --------------------
@@ -92,9 +94,10 @@ type FuncCall struct {
 }
 
 type Var struct {
-	name   string
-	offset int
-	ty     *Type
+	name    string
+	offset  int
+	ty      *Type
+	isLocal bool
 }
 
 type ArrayRef struct {
@@ -120,6 +123,11 @@ func (IntLit) isExpr()   {}
 func (Empty) isExpr()    {}
 
 func findVar(name string) *Var {
+	for _, v := range globals {
+		if v.name == name {
+			return &v
+		}
+	}
 	for _, v := range tmpLocals {
 		if v.name == name {
 			return &v
@@ -153,14 +161,14 @@ func varSpec() Var {
 
 	tokTy := consumeToken(TK_TYPE)
 	if tokTy == nil {
-		return Var{tokId.str, varOffset, &Type{"none", length}}
+		return Var{tokId.str, varOffset, &Type{"none", length}, true}
 	}
 
 	if !supportType(tokTy.str) {
 		panic(fmt.Sprintf("Unsupported type %s\n", tokTy.str))
 	}
 
-	return Var{tokId.str, varOffset, &Type{tokTy.str, length}}
+	return Var{tokId.str, varOffset, &Type{tokTy.str, length}, true}
 }
 
 func consume(op string) bool {
@@ -191,7 +199,7 @@ func assert(op string) {
 func assertType() string {
 	tok := consumeToken(TK_TYPE)
 	if tok == nil {
-		panic(fmt.Sprintf("Expected TYPE but got %#v\n", tokens[0]))
+		panic(fmt.Sprintf("Expected type but got %#v\n", tokens[0]))
 	}
 
 	if !supportType(tok.str) {
@@ -274,10 +282,54 @@ func forHeaders() (Stmt, Expr, Stmt) {
 
 func program() Program {
 	funcs := make([]Function, 0)
+
+	preStmts := make([]Stmt, 0)
+	funcs = append(funcs, Function{"preMain", []Var{}, []Var{}, nil, 8})
 	for len(tokens) > 0 {
-		funcs = append(funcs, function())
+		if consume("func") {
+			funcs = append(funcs, function())
+		}
+
+		// Global variable.
+		if consume("var") {
+			v := varSpec()
+
+			v.isLocal = false
+			globals = append(globals, v)
+
+			if consume(";") {
+				continue
+			}
+
+			if consume("=") {
+				length := arrayLength()
+				if length == -1 {
+					preStmts = append(preStmts, Assign{[]Expr{v}, []Expr{expr()}})
+					assert(";")
+					continue
+				}
+
+				// Multiple elements in an array.
+				assertType()
+				assert("{")
+
+				v.ty.length = length
+
+				lvals := make([]Expr, length)
+				rvals := exprList()
+				// Expand left-side expressions.
+				for i := 0; i < length; i++ {
+					lvals[i] = ArrayRef{v, i}
+				}
+				assert("}")
+				assert(";")
+				preStmts = append(preStmts, Assign{lvals, rvals})
+			}
+		}
 	}
-	return Program{funcs}
+	preStmts = append(preStmts, Return{Empty{}})
+	funcs[0].stmts = preStmts
+	return Program{globals, funcs}
 }
 
 func function() Function {
@@ -285,7 +337,6 @@ func function() Function {
 	varOffset = 8
 	tmpLocals = make([]Var, 0)
 
-	assert("func")
 	tok := consumeToken(TK_IDENT)
 	if tok == nil {
 		panic(fmt.Sprintf("Expected an identifier after 'func' keyword but got %#v\n", tok))
@@ -562,7 +613,7 @@ func primary() Expr {
 		if idx == -1 {
 			// Normal variable.
 			if varp == nil {
-				return Var{tok.str, varOffset, &Type{"none", 1}}
+				return Var{tok.str, varOffset, &Type{"none", 1}, true}
 			}
 			return *varp
 		}

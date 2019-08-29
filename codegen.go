@@ -13,8 +13,12 @@ var funcname string
 func genAddr(node interface{}) {
 	switch n := node.(type) {
 	case Var:
-		fmt.Printf("  lea rax, [rbp-%d]\n", n.offset)
-		fmt.Printf("  push rax\n")
+		if n.isLocal {
+			fmt.Printf("  lea rax, [rbp-%d]\n", n.offset)
+			fmt.Printf("  push rax\n")
+		} else {
+			fmt.Printf("  push offset %s\n", n.name)
+		}
 		return
 	case Deref:
 		gen(n.child)
@@ -210,12 +214,24 @@ func gen(node interface{}) {
 	fmt.Printf("  push rax\n")
 }
 
-func codegen(prog Program) {
-	fmt.Printf(".intel_syntax noprefix\n")
+func emitData(prog Program) {
+	fmt.Printf(".data\n")
+
+	for _, g := range prog.globals {
+		fmt.Printf("%s:\n", g.name)
+		fmt.Printf("  .zero %d\n", g.ty.length*8)
+	}
+}
+
+func emitText(prog Program) {
+	fmt.Printf(".text\n")
+
+	for _, f := range prog.funcs {
+		fmt.Printf(".global %s\n", f.name)
+	}
 
 	for _, f := range prog.funcs {
 		funcname = f.name
-		fmt.Printf(".global %s\n", funcname)
 		fmt.Printf("%s:\n", funcname)
 
 		// Prologue.
@@ -239,4 +255,10 @@ func codegen(prog Program) {
 		fmt.Printf("  pop rbp\n")
 		fmt.Printf("  ret\n")
 	}
+}
+
+func codegen(prog Program) {
+	fmt.Printf(".intel_syntax noprefix\n")
+	emitData(prog)
+	emitText(prog)
 }
