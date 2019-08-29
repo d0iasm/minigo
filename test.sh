@@ -117,9 +117,9 @@ assert 2 'func main() { return sub(5, 3); }'
 assert 21 'func main() { return add6(1,2,3,4,5,6); }'
 
 assert 32 'func main() { return ret32(); } func ret32() { return 32; }'
-assert 7 'func main() { return add2(3,4); } func add2(x int, y int) { return x+y; }'
-assert 1 'func main() { return sub2(4,3); } func sub2(x int, y int) { return x-y; }'
-assert 55 'func main() { return fib(9); } func fib(x int) { if x<=1 { return 1; } return fib(x-1) + fib(x-2); }'
+assert 7 'func main() { return add2(3,4); } func add2(x int64, y int64) { return x+y; }'
+assert 1 'func main() { return sub2(4,3); } func sub2(x int64, y int64) { return x-y; }'
+assert 55 'func main() { return fib(9); } func fib(x int64) { if x<=1 { return 1; } return fib(x-1) + fib(x-2); }'
 
 echo
 echo 'pointers'
@@ -135,32 +135,32 @@ echo
 assert 2 'func main() { x:=2; return x; }'
 assert 2 'func main() { x:=5; y:=3; return x-y; }'
 
-assert 42 'func main() { var x int; x=42; return x; }'
-assert 3 'func main() { var x int=3; return x; }'
-assert 3 'func main() { var x int=5; var y int=2; return x-y; }'
-assert 4 'func main() { var x int; x=3; return x+1; }'
-assert 4 'func main() { var x int; x=3; var y=1; return x+y; }'
-assert 4 'func main() { var x int; x=3; y:=1; return x+y; }'
+assert 42 'func main() { var x int64; x=42; return x; }'
+assert 3 'func main() { var x int64=3; return x; }'
+assert 3 'func main() { var x int64=5; var y int64=2; return x-y; }'
+assert 4 'func main() { var x int64; x=3; return x+1; }'
+assert 4 'func main() { var x int64; x=3; var y=1; return x+y; }'
+assert 4 'func main() { var x int64; x=3; y:=1; return x+y; }'
 
 echo
 echo 'arrays'
 echo
-assert 1 'func main() { var x [2]int; x[0]=1; x[1]=2; return x[0]; }'
-assert 2 'func main() { var x [2]int; x[0]=1; x[1]=2; return x[1]; }'
-assert 3 'func main() { var x [2]int; x[0]=2; x[1]=5; return x[1]-x[0]; }'
-assert 2 'func main() { var x [2]int = [2]int{1, 2}; return x[1]; }'
-assert 3 'func main() { x:=[2]int{2, 5}; return x[1]-x[0]; }'
+assert 1 'func main() { var x [2]int64; x[0]=1; x[1]=2; return x[0]; }'
+assert 2 'func main() { var x [2]int64; x[0]=1; x[1]=2; return x[1]; }'
+assert 3 'func main() { var x [2]int64; x[0]=2; x[1]=5; return x[1]-x[0]; }'
+assert 2 'func main() { var x [2]int64 = [2]int64{1, 2}; return x[1]; }'
+assert 3 'func main() { x:=[2]int64{2, 5}; return x[1]-x[0]; }'
 
 # Should fail but work well for some reason.
-#assert 42 'func main() { var x[2]int; *x=42; return *x; }'
-#assert 42 'func main() { var x[2]int; *(x+1)=42; return *(x+1); }'
-#assert 3 'func main() { var x[2]int; *x=1; *(x+1)=2; return *x + *(x+1); }'
+#assert 42 'func main() { var x[2]int64; *x=42; return *x; }'
+#assert 42 'func main() { var x[2]int64; *(x+1)=42; return *(x+1); }'
+#assert 3 'func main() { var x[2]int64; *x=1; *(x+1)=2; return *x + *(x+1); }'
 
 echo
 echo 'global variables'
 echo
-assert 3 'var a int; func main() { a=3; return a; }'
-assert 5 'var a int=5; func main() { return a; }'
-assert 3 'var a [3]int=[3]int{1,2,3}; func main() { return a[2]; }'
+assert 3 'var a int64; func main() { a=3; return a; }'
+assert 5 'var a int64=5; func main() { return a; }'
+assert 3 'var a [3]int64=[3]int64{1,2,3}; func main() { return a[2]; }'
 
 echo OK

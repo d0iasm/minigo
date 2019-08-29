@@ -327,7 +327,7 @@ func program() Program {
 			}
 		}
 	}
-	preStmts = append(preStmts, Return{IntLit{0, &Type{"int", 1}}})
+	preStmts = append(preStmts, Return{IntLit{0, &Type{"int64", 1}}})
 	funcs[0].stmts = preStmts
 	return Program{globals, funcs}
 }
@@ -579,7 +579,7 @@ func unary() Expr {
 	if consume("+") {
 		return unary()
 	} else if consume("-") {
-		return Binary{"-", IntLit{0, &Type{"int", 1}}, unary()} // -val = 0 - val
+		return Binary{"-", IntLit{0, &Type{"int64", 1}}, unary()} // -val = 0 - val
 	} else if consume("&") {
 		return Addr{unary()}
 	} else if consume("*") {
@@ -631,7 +631,7 @@ func primary() Expr {
 	}
 
 	// Integer literal.
-	n := IntLit{tokens[0].val, &Type{"int", 1}}
+	n := IntLit{tokens[0].val, &Type{"int64", 1}}
 	tokens = tokens[1:]
 	return n
 }

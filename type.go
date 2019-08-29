@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-var typeKinds = []string{"none", "char", "int"}
+var typeKinds = []string{"none", "char", "int64"}
 
 type Type struct {
 	kind   string
@@ -31,10 +31,10 @@ func addType(node interface{}) {
 	case Empty:
 		return
 	case IntLit:
-		if n.ty.kind == "int" {
+		if n.ty.kind == "int64" {
 			return
 		}
-		*n.ty = Type{"int", -1}
+		*n.ty = Type{"int64", 1}
 		return
 	case Var:
 		return
