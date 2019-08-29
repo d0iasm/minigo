@@ -24,8 +24,13 @@ func genAddr(node interface{}) {
 		gen(n.child)
 		return
 	case ArrayRef:
-		fmt.Printf("  lea rax, [rbp-%d]\n", n.v.offset+n.idx*8)
-		fmt.Printf("  push rax\n")
+		if n.v.isLocal {
+			fmt.Printf("  lea rax, [rbp-%d]\n", n.v.offset+n.idx*8)
+			fmt.Printf("  push rax\n")
+		} else {
+			fmt.Printf("  push offset %s+%d\n", n.v.name, n.idx*8)
+		}
+		return
 		return
 	}
 	panic("Not a lvalue")
@@ -233,6 +238,10 @@ func emitText(prog Program) {
 	for _, f := range prog.funcs {
 		funcname = f.name
 		fmt.Printf("%s:\n", funcname)
+
+		if funcname == "main" {
+			fmt.Printf("call preMain\n")
+		}
 
 		// Prologue.
 		fmt.Printf("  push rbp\n")

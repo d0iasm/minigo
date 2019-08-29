@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-var typeKinds = []string{"none", "bool", "int"}
+var typeKinds = []string{"none", "char", "int"}
 
 type Type struct {
 	kind   string

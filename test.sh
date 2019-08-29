@@ -160,7 +160,7 @@ echo
 echo 'global variables'
 echo
 assert 3 'var a int; func main() { a=3; return a; }'
-#assert 5 'var a int=5; func main() { return a; }'
-#assert 3 'var a [3]int=[3]int{1,2,3}; func main() { return a[2]; }'
+assert 5 'var a int=5; func main() { return a; }'
+assert 3 'var a [3]int=[3]int{1,2,3}; func main() { return a[2]; }'
 
 echo OK

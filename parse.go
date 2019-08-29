@@ -327,7 +327,7 @@ func program() Program {
 			}
 		}
 	}
-	preStmts = append(preStmts, Return{Empty{}})
+	preStmts = append(preStmts, Return{IntLit{0, &Type{"int", 1}}})
 	funcs[0].stmts = preStmts
 	return Program{globals, funcs}
 }
