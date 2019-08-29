@@ -19,6 +19,10 @@ func genAddr(node interface{}) {
 	case Deref:
 		gen(n.child)
 		return
+	case ArrayRef:
+		fmt.Printf("  lea rax, [rbp-%d]\n", n.v.offset+n.idx*8)
+		fmt.Printf("  push rax\n")
+		return
 	}
 	panic("Not a lvalue")
 }
@@ -68,6 +72,10 @@ func gen(node interface{}) {
 		return
 	case Deref:
 		gen(n.child)
+		load()
+		return
+	case ArrayRef:
+		genAddr(n)
 		load()
 		return
 	case Block:

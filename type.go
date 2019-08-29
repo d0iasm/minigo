@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-var typeKinds = []string{"none", "bool", "int", "uint"}
+var typeKinds = []string{"none", "bool", "int"}
 
 type Type struct {
 	kind   string
@@ -47,6 +47,9 @@ func addType(node interface{}) {
 		return
 	case Deref:
 		addType(n.child)
+		return
+	case ArrayRef:
+		addType(n.v)
 		return
 	case Block:
 		for _, c := range n.children {

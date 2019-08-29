@@ -97,6 +97,11 @@ type Var struct {
 	ty     *Type
 }
 
+type ArrayRef struct {
+	v   Var
+	idx int
+}
+
 type IntLit struct {
 	val int
 	ty  *Type
@@ -110,6 +115,7 @@ func (FuncCall) isExpr() {}
 func (Var) isExpr()      {}
 func (Addr) isExpr()     {}
 func (Deref) isExpr()    {}
+func (ArrayRef) isExpr() {}
 func (IntLit) isExpr()   {}
 func (Empty) isExpr()    {}
 
@@ -122,22 +128,39 @@ func findVar(name string) *Var {
 	return nil
 }
 
+func arrayLength() int {
+	idx := -1
+	// Array.
+	if consume("[") {
+		// only supports a fixed array.
+		idx = tokens[0].val
+		tokens = tokens[1:]
+		assert("]")
+	}
+	return idx
+}
+
 func varSpec() Var {
 	tokId := consumeToken(TK_IDENT)
 	if tokId == nil {
 		panic(fmt.Sprintf("Expected an identifier but got %#v\n", tokId))
 	}
 
+	length := arrayLength()
+	if length == -1 {
+		length = 1
+	}
+
 	tokTy := consumeToken(TK_TYPE)
 	if tokTy == nil {
-		return Var{tokId.str, varOffset, &Type{"none", -1}}
+		return Var{tokId.str, varOffset, &Type{"none", length}}
 	}
 
 	if !supportType(tokTy.str) {
 		panic(fmt.Sprintf("Unsupported type %s\n", tokTy.str))
 	}
 
-	return Var{tokId.str, varOffset, &Type{tokTy.str, -1}}
+	return Var{tokId.str, varOffset, &Type{tokTy.str, length}}
 }
 
 func consume(op string) bool {
@@ -191,7 +214,8 @@ func funcParams() []Var {
 
 	for {
 		v := varSpec()
-		varOffset += 8
+
+		varOffset += (v.ty.length * 8)
 		tmpLocals = append(tmpLocals, v)
 		params = append(params, v)
 
@@ -277,18 +301,21 @@ func stmt() Stmt {
 		if varp != nil {
 			panic(fmt.Sprintf("%s is already declared. No new variables\n", v.name))
 		}
-		varOffset += 8
+
+		varOffset += (v.ty.length * 8)
 		tmpLocals = append(tmpLocals, v)
 
 		if consume("=") {
 			return Assign{v, expr()}
 		}
+		// Return Empty struct because of no assignment.
 		return Empty{}
 	}
 
 	// Return statement.
 	if consume("return") {
 		stmtN := Return{expr()}
+		// TODO: assert(";") is not necessary?
 		assert(";")
 		return stmtN
 	}
@@ -346,6 +373,7 @@ func simpleStmt(exprN Expr) Stmt {
 		}
 		varOffset += 8
 		tmpLocals = append(tmpLocals, v)
+
 		return Assign{v, expr()}
 	}
 
@@ -440,7 +468,7 @@ func unary() Expr {
 	if consume("+") {
 		return unary()
 	} else if consume("-") {
-		return Binary{"-", IntLit{0, &Type{"int", -1}}, unary()} // -val = 0 - val
+		return Binary{"-", IntLit{0, &Type{"int", 1}}, unary()} // -val = 0 - val
 	} else if consume("&") {
 		return Addr{unary()}
 	} else if consume("*") {
@@ -465,17 +493,34 @@ func primary() Expr {
 			return FuncCall{tok.str, funcArgs()}
 		}
 
+		// Ex. Get 2 in a[2], and get 1 in case of a normal varialbe.
+		idx := arrayLength()
+
 		// Variable.
 		// Not register to `tmpLocals` yet.
 		varp := findVar(tok.str)
-		if varp == nil {
-			return Var{tok.str, varOffset, &Type{"none", -1}}
+		if idx == -1 {
+			// Normal variable.
+			if varp == nil {
+				return Var{tok.str, varOffset, &Type{"none", 1}}
+			}
+			return *varp
 		}
-		return *varp
+
+		// Array reference should be declared beforehand.
+		if varp == nil {
+			panic(fmt.Sprintf("Undefined %s", varp.name))
+		}
+
+		// Index overflow.
+		if varp.ty.length <= idx {
+			panic(fmt.Sprintf("Invalid array index %d", idx))
+		}
+		return ArrayRef{*varp, idx}
 	}
 
 	// Integer literal.
-	n := IntLit{tokens[0].val, &Type{"int", -1}}
+	n := IntLit{tokens[0].val, &Type{"int", 1}}
 	tokens = tokens[1:]
 	return n
 }
@@ -517,6 +562,9 @@ func printNode(node interface{}, dep int) {
 	case Deref:
 		fmt.Printf("Deref dep: %d\n", dep)
 		printNode(n.child, dep+1)
+	case ArrayRef:
+		fmt.Printf("ArrayRef dep: %d, var: %#v, idx: %d\n", dep, n.v, n.idx)
+		printNode(n.v, dep+1)
 	case Block:
 		fmt.Printf("Block dep: %d\n", dep)
 		for _, c := range n.children {

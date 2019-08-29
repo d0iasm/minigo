@@ -142,4 +142,18 @@ assert 4 'func main() { var x int; x=3; return x+1; }'
 assert 4 'func main() { var x int; x=3; var y=1; return x+y; }'
 assert 4 'func main() { var x int; x=3; y:=1; return x+y; }'
 
+echo
+echo 'arrays'
+echo
+assert 1 'func main() { var x [2]int; x[0]=1; x[1]=2; return x[0]; }'
+assert 2 'func main() { var x [2]int; x[0]=1; x[1]=2; return x[1]; }'
+assert 3 'func main() { var x [2]int; x[0]=2; x[1]=5; return x[1]-x[0]; }'
+#assert 2 'func main() { var x [2]int = [2]int{1, 2}; return x[1]; }'
+#assert 2 'func main() { x:={1, 2}; return x[1]; }'
+
+# Should fail but work well for some reason.
+#assert 42 'func main() { var x[2]int; *x=42; return *x; }'
+#assert 42 'func main() { var x[2]int; *(x+1)=42; return *(x+1); }'
+#assert 3 'func main() { var x[2]int; *x=1; *(x+1)=2; return *x + *(x+1); }'
+
 echo OK
