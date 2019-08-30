@@ -7,7 +7,10 @@ import (
 var labelseq int = 1
 
 // Comply with System V ABI.
+// Lower 8-bit register (1 byte).
 var argreg1 = []string{"dil", "sil", "dl", "cl", "r8b", "r9b"}
+
+// 64-bit register (8 bytes).
 var argreg8 = []string{"rdi", "rsi", "rdx", "rcx", "r8", "r9"}
 var funcname string
 
@@ -64,6 +67,15 @@ func isEmpty(node interface{}) bool {
 func gen(node interface{}) {
 	switch n := node.(type) {
 	case Empty:
+		return
+	case String:
+		//fmt.Printf("  lea rax, %s[rip]\n", n.val)
+		//fmt.Printf("  push rax\n")
+		if n.idx > -1 {
+			// TODO: how to access "hoge"[2]?
+			val := n.val[n.idx]
+			fmt.Printf("  push %d\n", val)
+		}
 		return
 	case IntLit:
 		fmt.Printf("  push %d\n", n.val)
@@ -227,6 +239,11 @@ func emitData(prog Program) {
 		fmt.Printf("%s:\n", g.name)
 		fmt.Printf("  .zero %d\n", g.ty.length*8)
 	}
+
+	for _, c := range prog.contents {
+		fmt.Printf("%s:\n", c.label)
+		fmt.Printf("  .zero %d\n", len(c.val))
+	}
 }
 
 func emitText(prog Program) {
@@ -241,7 +258,7 @@ func emitText(prog Program) {
 		fmt.Printf("%s:\n", funcname)
 
 		if funcname == "main" {
-			fmt.Printf("call %s\n", prog.funcs[0].name)
+			fmt.Printf("  call %s\n", prog.funcs[0].name)
 		}
 
 		// Prologue.

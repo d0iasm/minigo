@@ -16,6 +16,7 @@ const (
 	TK_IDENT           // Identifiers
 	TK_TYPE            // Types
 	TK_NUM             // Integer literals
+	TK_STRING          // String literals
 )
 
 type Token struct {
@@ -71,7 +72,7 @@ func startsReserved() string {
 		}
 	}
 
-	if strings.Contains("+-*/()<>;={},&[]", in[0:1]) {
+	if strings.Contains("+-*/()<>;={},&[]\"", in[0:1]) {
 		return in[0:1]
 	}
 	return ""
@@ -108,13 +109,17 @@ func tokenize() []Token {
 			continue
 		}
 		if isAlpha(in[0]) {
-			name := in[0:1]
+			str := in[0:1]
 			in = in[1:]
 			for len(in) > 0 && isAlnum(in[0]) {
-				name += in[0:1]
+				str += in[0:1]
 				in = in[1:]
 			}
-			tokens = append(tokens, Token{TK_IDENT, -1, name})
+			if tokens[len(tokens)-1].str == "\"" {
+				tokens = append(tokens, Token{TK_STRING, -1, str})
+			} else {
+				tokens = append(tokens, Token{TK_IDENT, -1, str})
+			}
 			continue
 		}
 		if isNum(in[0]) {

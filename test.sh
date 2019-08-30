@@ -165,4 +165,13 @@ assert 5 'var a int64=5; func main() { return a; }'
 assert 12 'var a int64=2*6; func main() { return a; }'
 assert 3 'var a [3]int64=[3]int64{1,2,3}; func main() { return a[2]; }'
 
+echo
+echo 'strings'
+echo
+assert 97 'func main() { return "abc"[0]; }'
+assert 98 'func main() { return "abc"[1]; }'
+assert 99 'func main() { return "abc"[2]; }'
+# 'hoge' variable has length 1 so index overflow now.
+#assert 1 'func main() { hoge:="abc" return hoge[2]; }'
+
 echo OK

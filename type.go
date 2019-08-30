@@ -9,6 +9,7 @@ var typeKinds = []string{"none", "bool", "int64", "string", "pointer"}
 type Type struct {
 	kind   string
 	length int
+	//base *Type // TODO: Make a base field for dereference pointers.
 }
 
 func supportType(kind string) bool {
@@ -34,6 +35,11 @@ func addType(node interface{}) {
 			return
 		}
 		*n.ty = Type{"int64", 1}
+	case String:
+		if n.ty.kind == "string" {
+			return
+		}
+		*n.ty = Type{"string", 1}
 	case Addr:
 		addType(n.child)
 		if n.ty.kind == "pointer" {

@@ -8,6 +8,9 @@ var globals []Var
 var tmpLocals []Var
 var varOffset int = 8
 
+var contents []String
+var contentCnt = 0
+
 // -------------------- Interfaces --------------------
 // All declaration nodes must implement the Decl interface.
 type Decl interface {
@@ -28,8 +31,9 @@ type Expr interface {
 
 // -------------------- Top level program --------------------
 type Program struct {
-	globals []Var
-	funcs   []Function
+	globals  []Var
+	contents []String
+	funcs    []Function
 }
 
 // -------------------- Declarations --------------------
@@ -92,6 +96,13 @@ type IntLit struct {
 	ty  *Type
 }
 
+type String struct {
+	val   string
+	label string
+	idx   int
+	ty    *Type
+}
+
 type Unary struct {
 	child Expr
 	ty    *Type
@@ -133,6 +144,7 @@ func (Addr) isExpr()     {}
 func (Deref) isExpr()    {}
 func (ArrayRef) isExpr() {}
 func (IntLit) isExpr()   {}
+func (String) isExpr()   {}
 func (Empty) isExpr()    {}
 
 func (b Binary) getType() *Type   { return b.ty }
@@ -142,6 +154,7 @@ func (a Addr) getType() *Type     { return a.ty }
 func (d Deref) getType() *Type    { return d.ty }
 func (a ArrayRef) getType() *Type { return a.ty }
 func (i IntLit) getType() *Type   { return i.ty }
+func (s String) getType() *Type   { return s.ty }
 func (e Empty) getType() *Type    { return nil }
 
 func (b Binary) setType(ty Type)   { *b.ty = ty }
@@ -151,6 +164,7 @@ func (a Addr) setType(ty Type)     { *a.ty = ty }
 func (d Deref) setType(ty Type)    { *d.ty = ty }
 func (a ArrayRef) setType(ty Type) { *a.ty = ty }
 func (i IntLit) setType(ty Type)   { *i.ty = ty }
+func (s String) setType(ty Type)   { *s.ty = ty }
 func (e Empty) setType(ty Type)    {}
 
 func findVar(name string) *Var {
@@ -165,6 +179,12 @@ func findVar(name string) *Var {
 		}
 	}
 	return nil
+}
+
+func newLabel() string {
+	l := fmt.Sprintf(".L.data.%d", contentCnt)
+	contentCnt++
+	return l
 }
 
 func arrayLength() int {
@@ -360,7 +380,7 @@ func program() Program {
 	}
 	preStmts = append(preStmts, Return{IntLit{0, &Type{"int64", 1}}})
 	funcs[0].stmts = preStmts
-	return Program{globals, funcs}
+	return Program{globals, contents, funcs}
 }
 
 func function() Function {
@@ -616,18 +636,19 @@ func unary() Expr {
 	} else if consume("*") {
 		return Deref{unary(), &Type{"none", 1}}
 	}
-	return primary()
+	return operand()
 }
 
-func primary() Expr {
-	// Operand "()".
+// Operand = Literal | OperandName | "(" Expression ")" .
+func operand() Expr {
+	// "(" Expression ")".
 	if consume("(") {
 		exprN := expr()
 		assert(")")
 		return exprN
 	}
 
-	// Identifier.
+	// OperandName = identifier.
 	tok := consumeToken(TK_IDENT)
 	if tok != nil {
 		// Function call.
@@ -659,6 +680,21 @@ func primary() Expr {
 			panic(fmt.Sprintf("Invalid array index %d", idx))
 		}
 		return ArrayRef{*varp, idx, &Type{"pointer", 1}}
+	}
+	return literal()
+}
+
+func literal() Expr {
+	// String literal.
+	if consume("\"") {
+		n := String{tokens[0].str, newLabel(), -1, &Type{"string", 1}}
+		contents = append(contents, n)
+		tokens = tokens[1:]
+		assert("\"")
+		// TODO: how to access "hoge"[2]?
+		idx := arrayLength()
+		n.idx = idx
+		return n
 	}
 
 	// Integer literal.
