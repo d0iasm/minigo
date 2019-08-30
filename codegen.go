@@ -7,7 +7,8 @@ import (
 var labelseq int = 1
 
 // Comply with System V ABI.
-var argreg = []string{"rdi", "rsi", "rdx", "rcx", "r8", "r9"}
+var argreg1 = []string{"dil", "sil", "dl", "cl", "r8b", "r9b"}
+var argreg8 = []string{"rdi", "rsi", "rdx", "rcx", "r8", "r9"}
 var funcname string
 
 func genAddr(node interface{}) {
@@ -157,7 +158,7 @@ func gen(node interface{}) {
 			gen(arg)
 		}
 		for i := len(n.args) - 1; i >= 0; i-- {
-			fmt.Printf("  pop %s\n", argreg[i])
+			fmt.Printf("  pop %s\n", argreg8[i])
 		}
 
 		// We need to align RSP to a 16 byte boundary before
@@ -240,7 +241,7 @@ func emitText(prog Program) {
 		fmt.Printf("%s:\n", funcname)
 
 		if funcname == "main" {
-			fmt.Printf("call preMain\n")
+			fmt.Printf("call %s\n", prog.funcs[0].name)
 		}
 
 		// Prologue.
@@ -250,7 +251,7 @@ func emitText(prog Program) {
 
 		// Push parameters to the stack.
 		for i, p := range f.params {
-			fmt.Printf("  mov [rbp-%d], %s\n", p.offset, argreg[i])
+			fmt.Printf("  mov [rbp-%d], %s\n", p.offset, argreg8[i])
 		}
 
 		// Emit code.

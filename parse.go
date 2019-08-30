@@ -22,6 +22,8 @@ type Stmt interface {
 // All expression nodes must implement the Expr interface.
 type Expr interface {
 	isExpr()
+	getType() *Type
+	setType(ty Type)
 }
 
 // -------------------- Top level program --------------------
@@ -42,7 +44,12 @@ type Function struct {
 func (Function) isDecl() {}
 
 // -------------------- Statements --------------------
-type Unary struct { // It's also an expression.
+type ExprStmt struct {
+	child Expr
+}
+
+type Return struct {
+	//children []Expr
 	child Expr
 }
 
@@ -70,8 +77,6 @@ type Assign struct {
 }
 
 type Empty struct{} // It's also an expression
-type Return Unary
-type ExprStmt Unary
 
 func (Assign) isStmt()   {}
 func (Return) isStmt()   {}
@@ -82,32 +87,40 @@ func (For) isStmt()      {}
 func (Empty) isStmt()    {}
 
 // -------------------- Expressions --------------------
+type IntLit struct {
+	val int
+	ty  *Type
+}
+
+type Unary struct {
+	child Expr
+	ty    *Type
+}
+
 type Binary struct {
 	op  string
 	lhs Expr
 	rhs Expr
-}
-
-type FuncCall struct {
-	name string
-	args []Expr
+	ty  *Type
 }
 
 type Var struct {
 	name    string
 	offset  int
-	ty      *Type
 	isLocal bool
+	ty      *Type
 }
 
 type ArrayRef struct {
 	v   Var
 	idx int
+	ty  *Type
 }
 
-type IntLit struct {
-	val int
-	ty  *Type
+type FuncCall struct {
+	name string
+	args []Expr
+	ty   *Type // TODO: support function type.
 }
 
 type Addr Unary
@@ -121,6 +134,24 @@ func (Deref) isExpr()    {}
 func (ArrayRef) isExpr() {}
 func (IntLit) isExpr()   {}
 func (Empty) isExpr()    {}
+
+func (b Binary) getType() *Type   { return b.ty }
+func (f FuncCall) getType() *Type { return f.ty }
+func (v Var) getType() *Type      { return v.ty }
+func (a Addr) getType() *Type     { return a.ty }
+func (d Deref) getType() *Type    { return d.ty }
+func (a ArrayRef) getType() *Type { return a.ty }
+func (i IntLit) getType() *Type   { return i.ty }
+func (e Empty) getType() *Type    { return nil }
+
+func (b Binary) setType(ty Type)   { *b.ty = ty }
+func (f FuncCall) setType(ty Type) { *f.ty = ty }
+func (v Var) setType(ty Type)      { *v.ty = ty }
+func (a Addr) setType(ty Type)     { *a.ty = ty }
+func (d Deref) setType(ty Type)    { *d.ty = ty }
+func (a ArrayRef) setType(ty Type) { *a.ty = ty }
+func (i IntLit) setType(ty Type)   { *i.ty = ty }
+func (e Empty) setType(ty Type)    {}
 
 func findVar(name string) *Var {
 	for _, v := range globals {
@@ -161,14 +192,14 @@ func varSpec() Var {
 
 	tokTy := consumeToken(TK_TYPE)
 	if tokTy == nil {
-		return Var{tokId.str, varOffset, &Type{"none", length}, true}
+		return Var{tokId.str, varOffset, true, &Type{"none", length}}
 	}
 
 	if !supportType(tokTy.str) {
 		panic(fmt.Sprintf("Unsupported type %s\n", tokTy.str))
 	}
 
-	return Var{tokId.str, varOffset, &Type{tokTy.str, length}, true}
+	return Var{tokId.str, varOffset, true, &Type{tokTy.str, length}}
 }
 
 func consume(op string) bool {
@@ -319,7 +350,7 @@ func program() Program {
 				rvals := exprList()
 				// Expand left-side expressions.
 				for i := 0; i < length; i++ {
-					lvals[i] = ArrayRef{v, i}
+					lvals[i] = ArrayRef{v, i, &Type{"pointer", 1}}
 				}
 				assert("}")
 				assert(";")
@@ -385,7 +416,7 @@ func stmt() Stmt {
 			rvals := exprList()
 			// Expand left-side expressions.
 			for i := 0; i < length; i++ {
-				lvals[i] = ArrayRef{v, i}
+				lvals[i] = ArrayRef{v, i, &Type{"pointer", 1}}
 			}
 			assert("}")
 			return Assign{lvals, rvals}
@@ -473,7 +504,7 @@ func simpleStmt(exprN Expr) Stmt {
 		rvals := exprList()
 		// Expand left-side expressions.
 		for i := 0; i < length; i++ {
-			lvals[i] = ArrayRef{v, i}
+			lvals[i] = ArrayRef{v, i, &Type{"pointer", 1}}
 		}
 		assert("}")
 		return Assign{lvals, rvals}
@@ -516,9 +547,9 @@ func equality() Expr {
 
 	for len(tokens) > 0 {
 		if consume("==") {
-			exprN = Binary{"==", exprN, relational()}
+			exprN = Binary{"==", exprN, relational(), &Type{"none", 1}}
 		} else if consume("!=") {
-			exprN = Binary{"!=", exprN, relational()}
+			exprN = Binary{"!=", exprN, relational(), &Type{"none", 1}}
 		} else {
 			return exprN
 		}
@@ -531,13 +562,13 @@ func relational() Expr {
 
 	for len(tokens) > 0 {
 		if consume("<") {
-			exprN = Binary{"<", exprN, add()}
+			exprN = Binary{"<", exprN, add(), &Type{"none", 1}}
 		} else if consume("<=") {
-			exprN = Binary{"<=", exprN, add()}
+			exprN = Binary{"<=", exprN, add(), &Type{"none", 1}}
 		} else if consume(">") {
-			exprN = Binary{"<", add(), exprN}
+			exprN = Binary{"<", add(), exprN, &Type{"none", 1}}
 		} else if consume(">=") {
-			exprN = Binary{"<=", add(), exprN}
+			exprN = Binary{"<=", add(), exprN, &Type{"none", 1}}
 		} else {
 			return exprN
 		}
@@ -550,9 +581,9 @@ func add() Expr {
 
 	for len(tokens) > 0 {
 		if consume("+") {
-			exprN = Binary{"+", exprN, mul()}
+			exprN = Binary{"+", exprN, mul(), &Type{"none", 1}}
 		} else if consume("-") {
-			exprN = Binary{"-", exprN, mul()}
+			exprN = Binary{"-", exprN, mul(), &Type{"none", 1}}
 		} else {
 			return exprN
 		}
@@ -565,9 +596,9 @@ func mul() Expr {
 
 	for len(tokens) > 0 {
 		if consume("*") {
-			exprN = Binary{"*", exprN, unary()}
+			exprN = Binary{"*", exprN, unary(), &Type{"none", 1}}
 		} else if consume("/") {
-			exprN = Binary{"/", exprN, unary()}
+			exprN = Binary{"/", exprN, unary(), &Type{"none", 1}}
 		} else {
 			return exprN
 		}
@@ -579,11 +610,11 @@ func unary() Expr {
 	if consume("+") {
 		return unary()
 	} else if consume("-") {
-		return Binary{"-", IntLit{0, &Type{"int64", 1}}, unary()} // -val = 0 - val
+		return Binary{"-", IntLit{0, &Type{"int64", 1}}, unary(), &Type{"none", 1}} // -val = 0 - val
 	} else if consume("&") {
-		return Addr{unary()}
+		return Addr{unary(), &Type{"pointer", 1}}
 	} else if consume("*") {
-		return Deref{unary()}
+		return Deref{unary(), &Type{"none", 1}}
 	}
 	return primary()
 }
@@ -601,7 +632,7 @@ func primary() Expr {
 	if tok != nil {
 		// Function call.
 		if consume("(") {
-			return FuncCall{tok.str, funcArgs()}
+			return FuncCall{tok.str, funcArgs(), &Type{"none", 1}}
 		}
 
 		// Ex. Get 2 in a[2], and get 1 in case of a normal varialbe.
@@ -613,7 +644,7 @@ func primary() Expr {
 		if idx == -1 {
 			// Normal variable.
 			if varp == nil {
-				return Var{tok.str, varOffset, &Type{"none", 1}, true}
+				return Var{tok.str, varOffset, true, &Type{"none", 1}}
 			}
 			return *varp
 		}
@@ -627,7 +658,7 @@ func primary() Expr {
 		if varp.ty.length <= idx {
 			panic(fmt.Sprintf("Invalid array index %d", idx))
 		}
-		return ArrayRef{*varp, idx}
+		return ArrayRef{*varp, idx, &Type{"pointer", 1}}
 	}
 
 	// Integer literal.
