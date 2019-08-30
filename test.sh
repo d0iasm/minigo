@@ -12,7 +12,7 @@ assert() {
   expected="$1"
   input="$2"
 
-  go build main.go tokenize.go parse.go codegen.go type.go
+  go build main.go tokenize.go parse.go codegen.go type.go debug.go
   ./main -in "$input" > tmp.s
   gcc -static -o tmp tmp.s tmp2.o
   ./tmp
@@ -77,6 +77,7 @@ assert 3 'func main() { 1; 2; return 3; }'
 
 assert 3 'func main() { foo:=3; return foo; }'
 assert 8 'func main() { foo123:=3; bar:=5; return foo123+bar; }'
+assert 2 'func main() { hoge1:=1; hoge2:=hoge1+hoge1; return hoge2; }'
 
 echo
 echo 'blocks'
