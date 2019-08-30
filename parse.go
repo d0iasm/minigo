@@ -697,6 +697,14 @@ func literal() Expr {
 		return n
 	}
 
+	// Character (int32).
+	if consume("'") {
+		n := IntLit{tokens[0].val, &Type{"int32", 1}}
+		tokens = tokens[1:]
+		assert("'")
+		return n
+	}
+
 	// Integer literal.
 	n := IntLit{tokens[0].val, &Type{"int64", 1}}
 	tokens = tokens[1:]

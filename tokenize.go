@@ -72,7 +72,7 @@ func startsReserved() string {
 		}
 	}
 
-	if strings.Contains("+-*/()<>;={},&[]\"", in[0:1]) {
+	if strings.Contains("+-*/()<>;={},&[]'\"", in[0:1]) {
 		return in[0:1]
 	}
 	return ""
@@ -109,15 +109,28 @@ func tokenize() []Token {
 			continue
 		}
 		if isAlpha(in[0]) {
+			if tokens[len(tokens)-1].str == "'" {
+				// Character.
+				tokens = append(tokens, Token{TK_NUM, int(in[0]), in[0:1]})
+				in = in[1:]
+				if in[0] != '\'' {
+					panic("invalid character literal (more than one character)")
+				}
+				continue
+			}
+
 			str := in[0:1]
 			in = in[1:]
 			for len(in) > 0 && isAlnum(in[0]) {
 				str += in[0:1]
 				in = in[1:]
 			}
+
 			if tokens[len(tokens)-1].str == "\"" {
+				// String.
 				tokens = append(tokens, Token{TK_STRING, -1, str})
 			} else {
+				// Variable.
 				tokens = append(tokens, Token{TK_IDENT, -1, str})
 			}
 			continue

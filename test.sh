@@ -166,6 +166,14 @@ assert 12 'var a int64=2*6; func main() { return a; }'
 assert 3 'var a [3]int64=[3]int64{1,2,3}; func main() { return a[2]; }'
 
 echo
+echo 'characters'
+echo
+assert 97 "func main() { return 'a'; }"
+assert 98 "func main() { a := 'b'; return a; }"
+assert 99 "func main() { var a int32='c'; return a; }"
+assert 97 "var a int32 = 'a'; func main() { return a; }"
+
+echo
 echo 'strings'
 echo
 assert 97 'func main() { return "abc"[0]; }'

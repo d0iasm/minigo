@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-var typeKinds = []string{"none", "bool", "int64", "string", "pointer"}
+var typeKinds = []string{"none", "bool", "int32", "int64", "string", "pointer"}
 
 type Type struct {
 	kind   string
@@ -31,7 +31,7 @@ func addType(node interface{}) {
 	switch n := node.(type) {
 	// Expressions. It should have Type field.
 	case IntLit:
-		if n.ty.kind == "int64" {
+		if n.ty.kind != "none" {
 			return
 		}
 		*n.ty = Type{"int64", 1}
