@@ -172,6 +172,8 @@ assert 97 "func main() { return 'a'; }"
 assert 98 "func main() { a := 'b'; return a; }"
 assert 99 "func main() { var a int32='c'; return a; }"
 assert 97 "var a int32 = 'a'; func main() { return a; }"
+assert 98 "func main() { var a int32=1; b:='a' return a+b; }"
+assert 98 "func main() { return plus('a'); } func plus(a int32) { var b int32=1; return a + b; }"
 
 echo
 echo 'strings'

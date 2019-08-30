@@ -113,7 +113,11 @@ func addType(node interface{}) {
 		for i := range n.lvals {
 			addType(n.lvals[i])
 			addType(n.rvals[i])
-			n.lvals[i].setType(*n.rvals[i].getType())
+			if n.lvals[i].getType().kind == "none" {
+				n.lvals[i].setType(*n.rvals[i].getType())
+			} else {
+				n.rvals[i].setType(*n.lvals[i].getType())
+			}
 		}
 	default:
 		panic(fmt.Sprintf("Unexpected node type %#v", n))
