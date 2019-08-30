@@ -45,6 +45,7 @@ func addType(node interface{}) {
 		if n.child.getType().kind == "pointer" {
 			// TODO: how to get the type of child of child?
 			*n.ty = Type{"int64", 1}
+			return
 		}
 		*n.ty = Type{n.child.getType().kind, n.child.getType().length}
 	case Binary:
