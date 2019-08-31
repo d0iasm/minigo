@@ -25,6 +25,8 @@ func printNode(node interface{}, dep int) {
 
 	switch n := node.(type) {
 	// Expressions.
+	case StringLit:
+		fmt.Printf("dep: %d, node: %#v, type: %#v \n", dep, n, n.ty)
 	case IntLit:
 		fmt.Printf("dep: %d, node: %#v, type: %#v \n", dep, n, n.ty)
 	case Addr:

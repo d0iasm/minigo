@@ -28,28 +28,40 @@ func genAddr(node interface{}) {
 		gen(n.child)
 		return
 	case ArrayRef:
-		size := 8
-		if _, ok := n.lhs.(StringLit); ok {
-			size = 1
+		if n.lhs.getType().kind != "string" {
+			genAddr(n.lhs)
+			gen(n.rhs)
+			fmt.Printf("  pop rdi\n")
+			fmt.Printf("  pop rax\n")
+			fmt.Printf("  imul rdi, %d\n", 8)
+			fmt.Printf("  add rax, rdi\n")
+			fmt.Printf("  push rax\n")
+			return
 		}
+
 		genAddr(n.lhs)
 		gen(n.rhs)
 		fmt.Printf("  pop rdi\n") // Index.
-		fmt.Printf("  pop rax\n") // Pointer to string.
-		fmt.Printf("  imul rdi, %d\n", size)
+		fmt.Printf("  pop rax\n") // Pointer to string object.
+		fmt.Printf("  mov rax, [rax]\n")
 		fmt.Printf("  add rax, rdi\n")
 		fmt.Printf("  push rax\n")
 		return
 	case StringLit:
-		fmt.Printf("  push offset %s\n", n.label)
+		fmt.Printf("  push offset %s.obj\n", n.label)
 		return
 	}
 	panic("Not a lvalue")
 }
 
-func load() {
+func load(ty *Type) {
 	fmt.Printf("  pop rax\n")
-	fmt.Printf("  mov rax, [rax]\n")
+	//fmt.Printf("\n%#v\n", ty)
+	if ty.kind == "string" {
+		fmt.Printf("  movzx rax, byte ptr [rax]\n")
+	} else {
+		fmt.Printf("  mov rax, [rax]\n")
+	}
 	fmt.Printf("  push rax\n")
 }
 
@@ -79,12 +91,12 @@ func gen(node interface{}) {
 		fmt.Printf("  push %d\n", n.val)
 		return
 	case StringLit:
-		fmt.Printf("  push %d\n", len(n.val))
+		//fmt.Printf("  push %d\n", len(n.val))
 		fmt.Printf("  push offset %s\n", n.label)
 		return
 	case Var:
 		genAddr(n)
-		load()
+		load(n.ty)
 		return
 	case Assign:
 		if len(n.lvals) != len(n.rvals) {
@@ -101,11 +113,11 @@ func gen(node interface{}) {
 		return
 	case Deref:
 		gen(n.child)
-		load()
+		load(n.ty)
 		return
 	case ArrayRef:
 		genAddr(n)
-		load()
+		load(n.lhs.getType())
 		return
 	case Block:
 		for _, c := range n.children {
@@ -245,6 +257,8 @@ func emitData(prog Program) {
 	for _, c := range prog.contents {
 		fmt.Printf("%s:\n", c.label)
 		fmt.Printf("  .string \"%s\"\n", c.val)
+		fmt.Printf("%s.obj:\n", c.label)
+		fmt.Printf("  .quad %s\n", c.label)
 	}
 }
 
