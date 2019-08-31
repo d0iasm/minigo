@@ -8,7 +8,7 @@ var globals []Var
 var tmpLocals []Var
 var varOffset int = 8
 
-var contents []String
+var contents []StringLit
 var contentCnt = 0
 
 // -------------------- Interfaces --------------------
@@ -32,7 +32,7 @@ type Expr interface {
 // -------------------- Top level program --------------------
 type Program struct {
 	globals  []Var
-	contents []String
+	contents []StringLit
 	funcs    []Function
 }
 
@@ -96,10 +96,9 @@ type IntLit struct {
 	ty  *Type
 }
 
-type String struct {
+type StringLit struct {
 	val   string
 	label string
-	idx   int
 	ty    *Type
 }
 
@@ -123,8 +122,8 @@ type Var struct {
 }
 
 type ArrayRef struct {
-	v   Var
-	idx int
+	lhs Expr
+	rhs Expr
 	ty  *Type
 }
 
@@ -137,35 +136,35 @@ type FuncCall struct {
 type Addr Unary
 type Deref Unary
 
-func (Binary) isExpr()   {}
-func (FuncCall) isExpr() {}
-func (Var) isExpr()      {}
-func (Addr) isExpr()     {}
-func (Deref) isExpr()    {}
-func (ArrayRef) isExpr() {}
-func (IntLit) isExpr()   {}
-func (String) isExpr()   {}
-func (Empty) isExpr()    {}
+func (Binary) isExpr()    {}
+func (FuncCall) isExpr()  {}
+func (Var) isExpr()       {}
+func (Addr) isExpr()      {}
+func (Deref) isExpr()     {}
+func (ArrayRef) isExpr()  {}
+func (IntLit) isExpr()    {}
+func (StringLit) isExpr() {}
+func (Empty) isExpr()     {}
 
-func (b Binary) getType() *Type   { return b.ty }
-func (f FuncCall) getType() *Type { return f.ty }
-func (v Var) getType() *Type      { return v.ty }
-func (a Addr) getType() *Type     { return a.ty }
-func (d Deref) getType() *Type    { return d.ty }
-func (a ArrayRef) getType() *Type { return a.ty }
-func (i IntLit) getType() *Type   { return i.ty }
-func (s String) getType() *Type   { return s.ty }
-func (e Empty) getType() *Type    { return nil }
+func (b Binary) getType() *Type    { return b.ty }
+func (f FuncCall) getType() *Type  { return f.ty }
+func (v Var) getType() *Type       { return v.ty }
+func (a Addr) getType() *Type      { return a.ty }
+func (d Deref) getType() *Type     { return d.ty }
+func (a ArrayRef) getType() *Type  { return a.ty }
+func (i IntLit) getType() *Type    { return i.ty }
+func (s StringLit) getType() *Type { return s.ty }
+func (e Empty) getType() *Type     { return nil }
 
-func (b Binary) setType(ty Type)   { *b.ty = ty }
-func (f FuncCall) setType(ty Type) { *f.ty = ty }
-func (v Var) setType(ty Type)      { *v.ty = ty }
-func (a Addr) setType(ty Type)     { *a.ty = ty }
-func (d Deref) setType(ty Type)    { *d.ty = ty }
-func (a ArrayRef) setType(ty Type) { *a.ty = ty }
-func (i IntLit) setType(ty Type)   { *i.ty = ty }
-func (s String) setType(ty Type)   { *s.ty = ty }
-func (e Empty) setType(ty Type)    {}
+func (b Binary) setType(ty Type)    { *b.ty = ty }
+func (f FuncCall) setType(ty Type)  { *f.ty = ty }
+func (v Var) setType(ty Type)       { *v.ty = ty }
+func (a Addr) setType(ty Type)      { *a.ty = ty }
+func (d Deref) setType(ty Type)     { *d.ty = ty }
+func (a ArrayRef) setType(ty Type)  { *a.ty = ty }
+func (i IntLit) setType(ty Type)    { *i.ty = ty }
+func (s StringLit) setType(ty Type) { *s.ty = ty }
+func (e Empty) setType(ty Type)     {}
 
 func findVar(name string) *Var {
 	for _, v := range globals {
@@ -185,6 +184,15 @@ func newLabel() string {
 	l := fmt.Sprintf(".L.data.%d", contentCnt)
 	contentCnt++
 	return l
+}
+
+func getContent(s string) *StringLit {
+	for _, c := range contents {
+		if c.val == s {
+			return &c
+		}
+	}
+	return nil
 }
 
 func arrayLength() int {
@@ -370,7 +378,7 @@ func program() Program {
 				rvals := exprList()
 				// Expand left-side expressions.
 				for i := 0; i < length; i++ {
-					lvals[i] = ArrayRef{v, i, &Type{"pointer", 1}}
+					lvals[i] = ArrayRef{v, IntLit{i, &Type{"int64", 1}}, &Type{"pointer", 1}}
 				}
 				assert("}")
 				assert(";")
@@ -436,7 +444,7 @@ func stmt() Stmt {
 			rvals := exprList()
 			// Expand left-side expressions.
 			for i := 0; i < length; i++ {
-				lvals[i] = ArrayRef{v, i, &Type{"pointer", 1}}
+				lvals[i] = ArrayRef{v, IntLit{i, &Type{"int64", 1}}, &Type{"pointer", 1}}
 			}
 			assert("}")
 			return Assign{lvals, rvals}
@@ -447,10 +455,7 @@ func stmt() Stmt {
 
 	// Return statement.
 	if consume("return") {
-		stmtN := Return{expr()}
-		// TODO: assert(";") is not necessary?
-		assert(";")
-		return stmtN
+		return Return{expr()}
 	}
 
 	// Block.
@@ -524,7 +529,7 @@ func simpleStmt(exprN Expr) Stmt {
 		rvals := exprList()
 		// Expand left-side expressions.
 		for i := 0; i < length; i++ {
-			lvals[i] = ArrayRef{v, i, &Type{"pointer", 1}}
+			lvals[i] = ArrayRef{v, IntLit{i, &Type{"int64", 1}}, &Type{"pointer", 1}}
 		}
 		assert("}")
 		return Assign{lvals, rvals}
@@ -578,20 +583,30 @@ func equality() Expr {
 }
 
 func relational() Expr {
-	exprN := add()
+	exprN := arrayref()
 
 	for len(tokens) > 0 {
 		if consume("<") {
-			exprN = Binary{"<", exprN, add(), &Type{"none", 1}}
+			exprN = Binary{"<", exprN, arrayref(), &Type{"none", 1}}
 		} else if consume("<=") {
-			exprN = Binary{"<=", exprN, add(), &Type{"none", 1}}
+			exprN = Binary{"<=", exprN, arrayref(), &Type{"none", 1}}
 		} else if consume(">") {
-			exprN = Binary{"<", add(), exprN, &Type{"none", 1}}
+			exprN = Binary{"<", arrayref(), exprN, &Type{"none", 1}}
 		} else if consume(">=") {
-			exprN = Binary{"<=", add(), exprN, &Type{"none", 1}}
+			exprN = Binary{"<=", arrayref(), exprN, &Type{"none", 1}}
 		} else {
 			return exprN
 		}
+	}
+	return exprN
+}
+
+func arrayref() Expr {
+	exprN := add()
+
+	if consume("[") {
+		exprN = ArrayRef{exprN, add(), &Type{"none", 1}}
+		assert("]")
 	}
 	return exprN
 }
@@ -676,10 +691,13 @@ func operand() Expr {
 		}
 
 		// Index overflow.
-		if varp.ty.length <= idx {
-			panic(fmt.Sprintf("Invalid array index %d", idx))
-		}
-		return ArrayRef{*varp, idx, &Type{"pointer", 1}}
+		// TODO: Now, accessing index over size is possible.
+		// e.g. hoge:="abc"; hoge[5] is possible because `hoge` doesn't have its type yet
+		// so there is no way to check string length or array length.
+		//if varp.ty.length <= idx && varp.ty.kind != "string" {
+		//	panic(fmt.Sprintf("Invalid array index %d", idx))
+		//}
+		return ArrayRef{*varp, IntLit{idx, &Type{"int64", 1}}, &Type{"pointer", 1}}
 	}
 	return literal()
 }
@@ -687,13 +705,10 @@ func operand() Expr {
 func literal() Expr {
 	// String literal.
 	if consume("\"") {
-		n := String{tokens[0].str, newLabel(), -1, &Type{"string", 1}}
+		n := StringLit{tokens[0].str, newLabel(), &Type{"string", 1}}
 		contents = append(contents, n)
 		tokens = tokens[1:]
 		assert("\"")
-		// TODO: how to access "hoge"[2]?
-		idx := arrayLength()
-		n.idx = idx
 		return n
 	}
 

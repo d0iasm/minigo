@@ -28,13 +28,13 @@ func genAddr(node interface{}) {
 		gen(n.child)
 		return
 	case ArrayRef:
-		if n.v.isLocal {
-			fmt.Printf("  lea rax, [rbp-%d]\n", n.v.offset+n.idx*8)
-			fmt.Printf("  push rax\n")
-		} else {
-			fmt.Printf("  push offset %s+%d\n", n.v.name, n.idx*8)
-		}
-		return
+		genAddr(n.lhs)
+		gen(n.rhs)
+		fmt.Printf("  pop rdi\n") // index.
+		fmt.Printf("  pop rax\n") // pointer to string.
+		fmt.Printf("  imul rdi, 8\n")
+		fmt.Printf("  add rax, rdi\n")
+		fmt.Printf("  push rax\n")
 		return
 	}
 	panic("Not a lvalue")
@@ -68,17 +68,12 @@ func gen(node interface{}) {
 	switch n := node.(type) {
 	case Empty:
 		return
-	case String:
-		//fmt.Printf("  lea rax, %s[rip]\n", n.val)
-		//fmt.Printf("  push rax\n")
-		if n.idx > -1 {
-			// TODO: how to access "hoge"[2]?
-			val := n.val[n.idx]
-			fmt.Printf("  push %d\n", val)
-		}
-		return
 	case IntLit:
 		fmt.Printf("  push %d\n", n.val)
+		return
+	case StringLit:
+		fmt.Printf("  push %d\n", len(n.val))
+		fmt.Printf("  push offset %s\n", n.label)
 		return
 	case Var:
 		genAddr(n)
@@ -242,7 +237,7 @@ func emitData(prog Program) {
 
 	for _, c := range prog.contents {
 		fmt.Printf("%s:\n", c.label)
-		fmt.Printf("  .zero %d\n", len(c.val))
+		fmt.Printf("  .string \"%s\"\n", c.val)
 	}
 }
 

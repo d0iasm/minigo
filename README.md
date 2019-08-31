@@ -1,7 +1,11 @@
 # minigo
 Minimum Go compiler that aims to do self-hosting. Its grammar is based on the official specification (https://golang.org/ref/spec), but it only supports parts of them.
 
-# Grammars
+## Milestones
+1. Calculate a fibonacci funcion ([88baba9](https://github.com/d0iasm/minigo/commit/88baba94a917221ffd6b4f15304ac560e7f2a6a8), 08/27/2019)
+2.
+
+## Grammars
 ```
 TopLevelDecl = FunctionDecl
 

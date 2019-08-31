@@ -41,7 +41,8 @@ func printNode(node interface{}, dep int) {
 		fmt.Printf("dep: %d, node: %#v, type: %#v \n", dep, n, n.ty)
 	case ArrayRef:
 		fmt.Printf("dep: %d, node: %#v, type: %#v \n", dep, n, n.ty)
-		printNode(n.v, dep+1)
+		printNode(n.lhs, dep+1)
+		printNode(n.rhs, dep+1)
 	case FuncCall:
 		fmt.Printf("dep: %d, node: %#v, type: %#v \n", dep, n, n.ty)
 		for _, arg := range n.args {

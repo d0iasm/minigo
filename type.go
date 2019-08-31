@@ -35,7 +35,7 @@ func addType(node interface{}) {
 			return
 		}
 		*n.ty = Type{"int64", 1}
-	case String:
+	case StringLit:
 		if n.ty.kind == "string" {
 			return
 		}
@@ -67,7 +67,8 @@ func addType(node interface{}) {
 	case Var:
 		// The type of variables are defined at Assgin node.
 	case ArrayRef:
-		addType(n.v)
+		addType(n.lhs)
+		addType(n.rhs)
 		if n.ty.kind == "pointer" {
 			return
 		}
@@ -111,13 +112,12 @@ func addType(node interface{}) {
 			panic(fmt.Sprintf("Not same length %d != %d", len(n.lvals), len(n.rvals)))
 		}
 		for i := range n.lvals {
-			addType(n.lvals[i])
+			// Add type from right-side node.
 			addType(n.rvals[i])
 			if n.lvals[i].getType().kind == "none" {
 				n.lvals[i].setType(*n.rvals[i].getType())
-			} else {
-				n.rvals[i].setType(*n.lvals[i].getType())
 			}
+			addType(n.lvals[i])
 		}
 	default:
 		panic(fmt.Sprintf("Unexpected node type %#v", n))
