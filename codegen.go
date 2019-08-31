@@ -28,13 +28,20 @@ func genAddr(node interface{}) {
 		gen(n.child)
 		return
 	case ArrayRef:
+		size := 8
+		if _, ok := n.lhs.(StringLit); ok {
+			size = 1
+		}
 		genAddr(n.lhs)
 		gen(n.rhs)
-		fmt.Printf("  pop rdi\n") // index.
-		fmt.Printf("  pop rax\n") // pointer to string.
-		fmt.Printf("  imul rdi, 8\n")
+		fmt.Printf("  pop rdi\n") // Index.
+		fmt.Printf("  pop rax\n") // Pointer to string.
+		fmt.Printf("  imul rdi, %d\n", size)
 		fmt.Printf("  add rax, rdi\n")
 		fmt.Printf("  push rax\n")
+		return
+	case StringLit:
+		fmt.Printf("  push offset %s\n", n.label)
 		return
 	}
 	panic("Not a lvalue")

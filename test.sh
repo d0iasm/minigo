@@ -181,6 +181,6 @@ echo
 assert 97 'func main() { return "abc"[0]; }'
 assert 98 'func main() { return "abc"[1]; }'
 assert 99 'func main() { return "abc"[2]; }'
-assert 98 'func main() { hoge:="abc" return hoge[2]; }'
+#assert 98 'func main() { hoge:="abc" return hoge[2]; }'
 
 echo OK
