@@ -109,7 +109,7 @@ func addType(node interface{}) {
 		}
 	case Assign:
 		if len(n.lvals) != len(n.rvals) {
-			panic(fmt.Sprintf("Not same length %d != %d", len(n.lvals), len(n.rvals)))
+			panic(fmt.Sprintf("not same length %d != %d", len(n.lvals), len(n.rvals)))
 		}
 		for i := range n.lvals {
 			// Add type from right-side node.
@@ -120,6 +120,6 @@ func addType(node interface{}) {
 			addType(n.lvals[i])
 		}
 	default:
-		panic(fmt.Sprintf("Unexpected node type %#v", n))
+		panic(fmt.Sprintf("unexpected node type %#v", n))
 	}
 }

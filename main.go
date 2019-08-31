@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"os"
 )
 
 var in string
@@ -17,8 +19,23 @@ func parseArgs() {
 	flag.Parse()
 
 	isDev = *devPtr
-	in = *inPtr
-	userIn = *inPtr
+
+	if inPtr != nil {
+		if len(os.Args) < 1 {
+			panic("invalid number of arguments")
+		}
+		b, err := ioutil.ReadFile(os.Args[1]) // just pass the file name
+
+		if err != nil {
+			panic(err)
+		}
+
+		in = string(b)
+		userIn = string(b)
+	} else {
+		in = *inPtr
+		userIn = *inPtr
+	}
 }
 
 func main() {

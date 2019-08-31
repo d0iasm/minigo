@@ -29,7 +29,7 @@ func tokenError(f string, vars ...string) {
 	n := len(userIn) - len(in)
 	fmt.Println(userIn)
 	fmt.Println(strings.Repeat(" ", n) + "^")
-	fmt.Println("[Error]", f, vars)
+	fmt.Println(f, vars)
 	os.Exit(1)
 }
 
@@ -139,7 +139,7 @@ func tokenize() []Token {
 			tokens = append(tokens, Token{TK_NUM, getNum(), ""})
 			continue
 		}
-		tokenError("Unexcected character:", in[0:1])
+		tokenError("unexcected character:", in[0:1])
 	}
 	return tokens
 }
