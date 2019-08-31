@@ -15,17 +15,18 @@ var isDev bool
 func parseArgs() {
 	devPtr := flag.Bool("dev", false, "Output logs for development.")
 	inPtr := flag.String("in", "", "Input string directly.")
+	buildPtr := flag.String("build", "", "Input file name.")
 
 	flag.Parse()
 
 	isDev = *devPtr
 
-	if inPtr != nil {
+	if buildPtr != nil {
 		if len(os.Args) < 1 {
 			panic("invalid number of arguments")
 		}
-		b, err := ioutil.ReadFile(os.Args[1]) // just pass the file name
 
+		b, err := ioutil.ReadFile(*buildPtr)
 		if err != nil {
 			panic(err)
 		}
