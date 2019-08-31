@@ -89,10 +89,26 @@ func startsType() string {
 	return ""
 }
 
+func insertEnd() {
+	fmt.Println(tokens)
+	if len(tokens) > 0 && strings.Contains("{}", tokens[len(tokens) - 1].str) {
+		return
+	}
+	if len(tokens) > 0 && tokens[len(tokens) - 1].str == ";" {
+		return
+	}
+	tokens = append(tokens, Token{TK_RESERVED, -1, ";"})
+}
+
 func tokenize() []Token {
 	tokens := make([]Token, 0)
 	for len(in) > 0 {
-		if in[0] == ' ' {
+		if in[0] == ' ' || in[0] == '\t' {
+			in = in[1:]
+			continue
+		}
+		if in[0] == '\n' {
+			insertEnd()
 			in = in[1:]
 			continue
 		}
