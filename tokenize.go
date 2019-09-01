@@ -12,11 +12,11 @@ var tokens []Token
 type TokenKind int
 
 const (
-	TK_RESERVED = iota // Keywords or punctuators
-	TK_IDENT           // Identifiers
-	TK_TYPE            // Types
-	TK_NUM             // Integer literals
-	TK_STRING          // String literals
+	TK_RESERVED TokenKind = iota // Keywords or punctuators
+	TK_IDENT                     // Identifiers
+	TK_TYPE                      // Types
+	TK_NUM                       // Integer literals
+	TK_STRING                    // String literals
 )
 
 type Token struct {
@@ -80,7 +80,8 @@ func startsReserved() string {
 }
 
 func startsType() string {
-	for _, t := range typeKinds {
+	typeStrs := []string{"bool", "int32", "int64", "string"}
+	for _, t := range typeStrs {
 		if strings.HasPrefix(in, t) {
 			if len(t) == len(in) || !isAlnum(in[len(t)]) {
 				return t

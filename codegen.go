@@ -28,7 +28,7 @@ func genAddr(node interface{}) {
 		gen(n.child)
 		return
 	case ArrayRef:
-		if n.lhs.getType().kind != "string" {
+		if n.lhs.getType().kind != TY_STRING {
 			genAddr(n.lhs)
 			gen(n.rhs)
 			fmt.Printf("  pop rdi\n")
@@ -57,7 +57,7 @@ func genAddr(node interface{}) {
 func load(ty *Type) {
 	fmt.Printf("  pop rax\n")
 	//fmt.Printf("\n%#v\n", ty)
-	if ty.kind == "string" {
+	if ty.kind == TY_STRING {
 		fmt.Printf("  movzx rax, byte ptr [rax]\n")
 	} else {
 		fmt.Printf("  mov rax, [rax]\n")

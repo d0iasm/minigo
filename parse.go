@@ -220,14 +220,14 @@ func varSpec() Var {
 
 	tokTy := consumeToken(TK_TYPE)
 	if tokTy == nil {
-		return Var{tokId.str, varOffset, true, &Type{"none", length}}
+		return Var{tokId.str, varOffset, true, newLiteral("none", 1)}
 	}
 
 	if !supportType(tokTy.str) {
 		panic(fmt.Sprintf("unsupported type %s\n", tokTy.str))
 	}
 
-	return Var{tokId.str, varOffset, true, &Type{tokTy.str, length}}
+	return Var{tokId.str, varOffset, true, newLiteral(tokTy.str, length)}
 }
 
 func consume(op string) bool {
@@ -383,7 +383,7 @@ func program() (Program, string) {
 				rvals := exprList()
 				// Expand left-side expressions.
 				for i := 0; i < length; i++ {
-					lvals[i] = ArrayRef{v, IntLit{i, &Type{"int64", 1}}, &Type{"pointer", 1}}
+					lvals[i] = ArrayRef{v, IntLit{i, newLiteral("int64", 1)}, newLiteral("pointer", 1)}
 				}
 				assert("}")
 				assert(";")
@@ -391,7 +391,7 @@ func program() (Program, string) {
 			}
 		}
 	}
-	preStmts = append(preStmts, Return{IntLit{0, &Type{"int64", 1}}})
+	preStmts = append(preStmts, Return{IntLit{0, newLiteral("int64", 1)}})
 	funcs[0].stmts = preStmts
 	return Program{globals, contents, funcs}, pkgName
 }
@@ -449,7 +449,7 @@ func stmt() Stmt {
 			rvals := exprList()
 			// Expand left-side expressions.
 			for i := 0; i < length; i++ {
-				lvals[i] = ArrayRef{v, IntLit{i, &Type{"int64", 1}}, &Type{"pointer", 1}}
+				lvals[i] = ArrayRef{v, IntLit{i, newLiteral("int64", 1)}, newLiteral("pointer", 1)}
 			}
 			assert("}")
 			return Assign{lvals, rvals}
@@ -534,7 +534,7 @@ func simpleStmt(exprN Expr) Stmt {
 		rvals := exprList()
 		// Expand left-side expressions.
 		for i := 0; i < length; i++ {
-			lvals[i] = ArrayRef{v, IntLit{i, &Type{"int64", 1}}, &Type{"pointer", 1}}
+			lvals[i] = ArrayRef{v, IntLit{i, newLiteral("int64", 1)}, newLiteral("pointer", 1)}
 		}
 		assert("}")
 		return Assign{lvals, rvals}
@@ -577,9 +577,9 @@ func equality() Expr {
 
 	for len(tokens) > 0 {
 		if consume("==") {
-			exprN = Binary{"==", exprN, relational(), &Type{"none", 1}}
+			exprN = Binary{"==", exprN, relational(), newLiteral("none", 1)}
 		} else if consume("!=") {
-			exprN = Binary{"!=", exprN, relational(), &Type{"none", 1}}
+			exprN = Binary{"!=", exprN, relational(), newLiteral("none", 1)}
 		} else {
 			return exprN
 		}
@@ -592,13 +592,13 @@ func relational() Expr {
 
 	for len(tokens) > 0 {
 		if consume("<") {
-			exprN = Binary{"<", exprN, arrayref(), &Type{"none", 1}}
+			exprN = Binary{"<", exprN, arrayref(), newLiteral("none", 1)}
 		} else if consume("<=") {
-			exprN = Binary{"<=", exprN, arrayref(), &Type{"none", 1}}
+			exprN = Binary{"<=", exprN, arrayref(), newLiteral("none", 1)}
 		} else if consume(">") {
-			exprN = Binary{"<", arrayref(), exprN, &Type{"none", 1}}
+			exprN = Binary{"<", arrayref(), exprN, newLiteral("none", 1)}
 		} else if consume(">=") {
-			exprN = Binary{"<=", arrayref(), exprN, &Type{"none", 1}}
+			exprN = Binary{"<=", arrayref(), exprN, newLiteral("none", 1)}
 		} else {
 			return exprN
 		}
@@ -610,7 +610,7 @@ func arrayref() Expr {
 	exprN := add()
 
 	if consume("[") {
-		exprN = ArrayRef{exprN, add(), &Type{"none", 1}}
+		exprN = ArrayRef{exprN, add(), newLiteral("none", 1)}
 		assert("]")
 	}
 	return exprN
@@ -621,9 +621,9 @@ func add() Expr {
 
 	for len(tokens) > 0 {
 		if consume("+") {
-			exprN = Binary{"+", exprN, mul(), &Type{"none", 1}}
+			exprN = Binary{"+", exprN, mul(), newLiteral("none", 1)}
 		} else if consume("-") {
-			exprN = Binary{"-", exprN, mul(), &Type{"none", 1}}
+			exprN = Binary{"-", exprN, mul(), newLiteral("none", 1)}
 		} else {
 			return exprN
 		}
@@ -636,9 +636,9 @@ func mul() Expr {
 
 	for len(tokens) > 0 {
 		if consume("*") {
-			exprN = Binary{"*", exprN, unary(), &Type{"none", 1}}
+			exprN = Binary{"*", exprN, unary(), newLiteral("none", 1)}
 		} else if consume("/") {
-			exprN = Binary{"/", exprN, unary(), &Type{"none", 1}}
+			exprN = Binary{"/", exprN, unary(), newLiteral("none", 1)}
 		} else {
 			return exprN
 		}
@@ -650,11 +650,11 @@ func unary() Expr {
 	if consume("+") {
 		return unary()
 	} else if consume("-") {
-		return Binary{"-", IntLit{0, &Type{"int64", 1}}, unary(), &Type{"none", 1}} // -val = 0 - val
+		return Binary{"-", IntLit{0, newLiteral("int64", 1)}, unary(), newLiteral("none", 1)} // -val = 0 - val
 	} else if consume("&") {
-		return Addr{unary(), &Type{"pointer", 1}}
+		return Addr{unary(), newLiteral("pointer", 1)}
 	} else if consume("*") {
-		return Deref{unary(), &Type{"none", 1}}
+		return Deref{unary(), newLiteral("none", 1)}
 	}
 	return operand()
 }
@@ -673,7 +673,7 @@ func operand() Expr {
 	if tok != nil {
 		// Function call.
 		if consume("(") {
-			return FuncCall{tok.str, funcArgs(), &Type{"none", 1}}
+			return FuncCall{tok.str, funcArgs(), newLiteral("none", 1)}
 		}
 
 		// Ex. Get 2 in a[2], and get 1 in case of a normal varialbe.
@@ -685,7 +685,7 @@ func operand() Expr {
 		if idx == -1 {
 			// Normal variable.
 			if varp == nil {
-				return Var{tok.str, varOffset, true, &Type{"none", 1}}
+				return Var{tok.str, varOffset, true, newLiteral("none", 1)}
 			}
 			return *varp
 		}
@@ -702,7 +702,7 @@ func operand() Expr {
 		//if varp.ty.length <= idx && varp.ty.kind != "string" {
 		//	panic(fmt.Sprintf("Invalid array index %d", idx))
 		//}
-		return ArrayRef{*varp, IntLit{idx, &Type{"int64", 1}}, &Type{"pointer", 1}}
+		return ArrayRef{*varp, IntLit{idx, newLiteral("int64", 1)}, newLiteral("pointer", 1)}
 	}
 	return literal()
 }
@@ -710,7 +710,7 @@ func operand() Expr {
 func literal() Expr {
 	// String literal.
 	if consume("\"") {
-		n := StringLit{tokens[0].str, newLabel(), &Type{"string", 1}}
+		n := StringLit{tokens[0].str, newLabel(), newLiteral("string", 1)}
 		contents = append(contents, n)
 		tokens = tokens[1:]
 		assert("\"")
@@ -719,14 +719,14 @@ func literal() Expr {
 
 	// Character (int32).
 	if consume("'") {
-		n := IntLit{tokens[0].val, &Type{"int32", 1}}
+		n := IntLit{tokens[0].val, newLiteral("int32", 1)}
 		tokens = tokens[1:]
 		assert("'")
 		return n
 	}
 
 	// Integer literal.
-	n := IntLit{tokens[0].val, &Type{"int64", 1}}
+	n := IntLit{tokens[0].val, newLiteral("int64", 1)}
 	tokens = tokens[1:]
 	return n
 }

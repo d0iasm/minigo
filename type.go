@@ -4,21 +4,58 @@ import (
 	"fmt"
 )
 
-var typeKinds = []string{"none", "bool", "int32", "int64", "string", "pointer"}
+type TypeKind int
+
+const (
+	TY_NONE TypeKind = iota
+	TY_BOOL
+	TY_INT32
+	TY_INT64
+	TY_STRING
+
+	TY_PTR
+
+	TY_ARRAY
+)
 
 type Type struct {
-	kind   string
+	kind   TypeKind
 	length int
-	//base *Type // TODO: Make a base field for dereference pointers.
+	base   *Type
 }
 
-func supportType(kind string) bool {
-	for _, t := range typeKinds {
-		if kind == t {
-			return true
-		}
+func typeKind(s string) TypeKind {
+	switch s {
+	case "bool":
+		return TY_BOOL
+	case "int32":
+		return TY_INT32
+	case "int64":
+		return TY_INT64
+	case "string":
+		return TY_STRING
+	case "pointer":
+		return TY_PTR
+	case "array":
+		return TY_ARRAY
+	default:
+		return TY_NONE
 	}
-	return false
+}
+
+func newLiteral(s string, l int) *Type {
+	return &Type{typeKind(s), l, nil}
+}
+
+func pointerTo(base *Type) Type {
+	return Type{TY_PTR, 1, base}
+}
+
+func supportType(s string) bool {
+	if typeKind(s) == TY_NONE {
+		return false
+	}
+	return true
 }
 
 func typeCheck(lty *Type, rty *Type, op string) {
@@ -31,48 +68,48 @@ func addType(node interface{}) {
 	switch n := node.(type) {
 	// Expressions. It should have Type field.
 	case IntLit:
-		if n.ty.kind != "none" {
+		if n.ty.kind != TY_NONE {
 			return
 		}
-		*n.ty = Type{"int64", 1}
+		n.ty = newLiteral("int64", 1)
 	case StringLit:
-		if n.ty.kind == "string" {
+		if n.ty.kind == TY_STRING {
 			return
 		}
-		*n.ty = Type{"string", 1}
+		n.ty = newLiteral("string", 1)
 	case Addr:
 		addType(n.child)
-		if n.ty.kind == "pointer" {
+		if n.ty.kind == TY_PTR {
 			return
 		}
-		*n.ty = Type{"pointer", 1}
+		n.ty = newLiteral("pointer", 1)
 	case Deref:
 		addType(n.child)
-		if n.child.getType().kind == "pointer" {
+		if n.child.getType().kind == TY_PTR {
 			// TODO: how to get the type of child of child?
-			*n.ty = Type{"int64", 1}
+			n.ty = newLiteral("int64", 1)
 			return
 		}
-		*n.ty = Type{n.child.getType().kind, n.child.getType().length}
+		*n.ty = Type{n.child.getType().kind, n.child.getType().length, nil}
 	case Binary:
 		addType(n.lhs)
 		addType(n.rhs)
 		typeCheck(n.lhs.getType(), n.rhs.getType(), n.op)
 		switch n.op {
 		case "+", "-", "*", "/":
-			*n.ty = Type{n.lhs.getType().kind, n.lhs.getType().length}
+			*n.ty = Type{n.lhs.getType().kind, n.lhs.getType().length, nil}
 		case "==", "!=", "<", "<=":
-			*n.ty = Type{"bool", 1}
+			n.ty = newLiteral("bool", 1)
 		}
 	case Var:
 		// The type of variables are defined at Assgin node.
 	case ArrayRef:
 		addType(n.lhs)
 		addType(n.rhs)
-		if n.ty.kind == "pointer" {
+		if n.ty.kind == TY_PTR {
 			return
 		}
-		*n.ty = Type{"pointer", 1}
+		n.ty = newLiteral("pointer", 1)
 	case FuncCall:
 		for _, arg := range n.args {
 			addType(arg)
@@ -114,7 +151,7 @@ func addType(node interface{}) {
 		for i := range n.lvals {
 			// Add type from right-side node.
 			addType(n.rvals[i])
-			if n.lvals[i].getType().kind == "none" {
+			if n.lvals[i].getType().kind == TY_NONE {
 				n.lvals[i].setType(*n.rvals[i].getType())
 			}
 			addType(n.lvals[i])
