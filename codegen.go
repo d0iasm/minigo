@@ -241,7 +241,7 @@ func gen(node interface{}) {
 		fmt.Printf("  setle al\n")
 		fmt.Printf("  movzx rax, al\n")
 	default:
-		panic("[Error] Unexpected node")
+		panic(fmt.Sprintf("unexpected node %#v", n))
 	}
 	fmt.Printf("  push rax\n")
 }

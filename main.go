@@ -47,8 +47,9 @@ func main() {
 		fmt.Println(tokens)
 	}
 
-	prog := program()
+	prog, pkg := program()
 	if isDev {
+		fmt.Println("package name:", pkg)
 		printNodes(prog.funcs)
 	}
 

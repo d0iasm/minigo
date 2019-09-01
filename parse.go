@@ -210,7 +210,7 @@ func arrayLength() int {
 func varSpec() Var {
 	tokId := consumeToken(TK_IDENT)
 	if tokId == nil {
-		panic(fmt.Sprintf("Expected an identifier but got %#v\n", tokId))
+		panic(fmt.Sprintf("expected an identifier but got %#v\n", tokId))
 	}
 
 	length := arrayLength()
@@ -224,7 +224,7 @@ func varSpec() Var {
 	}
 
 	if !supportType(tokTy.str) {
-		panic(fmt.Sprintf("Unsupported type %s\n", tokTy.str))
+		panic(fmt.Sprintf("unsupported type %s\n", tokTy.str))
 	}
 
 	return Var{tokId.str, varOffset, true, &Type{tokTy.str, length}}
@@ -252,17 +252,17 @@ func assert(op string) {
 		tokens = tokens[1:]
 		return
 	}
-	panic(fmt.Sprintf("tokens: %s\nExpected %s but got %s\n", tokens, op, tokens[0].str))
+	panic(fmt.Sprintf("expected %s but got %s\n", op, tokens[0].str))
 }
 
 func assertType() string {
 	tok := consumeToken(TK_TYPE)
 	if tok == nil {
-		panic(fmt.Sprintf("Expected type but got %#v\n", tokens[0]))
+		panic(fmt.Sprintf("expected type but got %#v\n", tokens[0]))
 	}
 
 	if !supportType(tok.str) {
-		panic(fmt.Sprintf("Unsupported type %s\n", tok.str))
+		panic(fmt.Sprintf("unsupported type %s\n", tok.str))
 	}
 	return tok.str
 }
@@ -339,7 +339,11 @@ func forHeaders() (Stmt, Expr, Stmt) {
 	return s1, e1, s2
 }
 
-func program() Program {
+func program() (Program, string) {
+	assert("package")
+	tok := consumeToken(TK_IDENT)
+	pkgName := tok.str
+
 	funcs := make([]Function, 0)
 
 	preStmts := make([]Stmt, 0)
@@ -388,7 +392,7 @@ func program() Program {
 	}
 	preStmts = append(preStmts, Return{IntLit{0, &Type{"int64", 1}}})
 	funcs[0].stmts = preStmts
-	return Program{globals, contents, funcs}
+	return Program{globals, contents, funcs}, pkgName
 }
 
 func function() Function {
@@ -398,7 +402,7 @@ func function() Function {
 
 	tok := consumeToken(TK_IDENT)
 	if tok == nil {
-		panic(fmt.Sprintf("Expected an identifier after 'func' keyword but got %#v\n", tok))
+		panic(fmt.Sprintf("expected an identifier after 'func' keyword but got %#v\n", tok))
 	}
 	name := tok.str
 	assert("(")
@@ -541,7 +545,7 @@ func simpleStmt(exprN Expr) Stmt {
 		case Var:
 			varp := findVar(v.name)
 			if varp == nil {
-				panic(fmt.Sprintf("Undefined: %s\n", v.name))
+				panic(fmt.Sprintf("undefined: %s\n", v.name))
 			}
 		}
 		return Assign{[]Expr{exprN}, []Expr{expr()}}
@@ -687,7 +691,7 @@ func operand() Expr {
 
 		// Array reference should be declared beforehand.
 		if varp == nil {
-			panic(fmt.Sprintf("Undefined %s", varp.name))
+			panic(fmt.Sprintf("undefined %s", varp.name))
 		}
 
 		// Index overflow.

@@ -26,6 +26,7 @@ type Token struct {
 }
 
 func tokenError(f string, vars ...string) {
+	// TODO: improve an error message and place
 	n := len(userIn) - len(in)
 	fmt.Println(userIn)
 	fmt.Println(strings.Repeat(" ", n) + "^")
@@ -56,7 +57,7 @@ func isAlnum(b byte) bool {
 }
 
 func startsReserved() string {
-	keywords := []string{"return", "if", "else", "for", "func", "var"}
+	keywords := []string{"return", "if", "else", "for", "func", "var", "package"}
 	for _, kw := range keywords {
 		if strings.HasPrefix(in, kw) {
 			if len(kw) == len(in) || !isAlnum(in[len(kw)]) {
@@ -90,11 +91,13 @@ func startsType() string {
 }
 
 func insertEnd() {
-	fmt.Println(tokens)
-	if len(tokens) > 0 && strings.Contains("{}", tokens[len(tokens) - 1].str) {
+	if len(tokens) < 1 {
 		return
 	}
-	if len(tokens) > 0 && tokens[len(tokens) - 1].str == ";" {
+	if strings.Contains("{}", tokens[len(tokens) - 1].str) {
+		return
+	}
+	if tokens[len(tokens) - 1].str == ";" {
 		return
 	}
 	tokens = append(tokens, Token{TK_RESERVED, -1, ";"})
