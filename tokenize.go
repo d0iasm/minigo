@@ -94,13 +94,37 @@ func insertEnd() {
 	if len(tokens) < 1 {
 		return
 	}
-	if strings.Contains("{}", tokens[len(tokens) - 1].str) {
+	if strings.Contains("{}", tokens[len(tokens)-1].str) {
 		return
 	}
-	if tokens[len(tokens) - 1].str == ";" {
+	if tokens[len(tokens)-1].str == ";" {
 		return
 	}
 	tokens = append(tokens, Token{TK_RESERVED, -1, ";"})
+}
+
+func readLine() string {
+	str := in[0:1]
+	in = in[1:]
+	for len(in) > 0 && in[0] != '\n' && in[0] != ';' {
+		str += in[0:1]
+		in = in[1:]
+	}
+	if len(in) > 0 {
+		// Remove `\n` or `;`.
+		in = in[1:]
+	}
+	return str
+}
+
+func readChunk() string {
+	str := in[0:1]
+	in = in[1:]
+	for len(in) > 0 && isAlnum(in[0]) && in[0] != '\n' {
+		str += in[0:1]
+		in = in[1:]
+	}
+	return str
 }
 
 func tokenize() []Token {
@@ -113,6 +137,12 @@ func tokenize() []Token {
 		if in[0] == '\n' {
 			insertEnd()
 			in = in[1:]
+			continue
+		}
+		if len(in) > 2 && in[0:2] == "//" {
+			// Ignore comments.
+			in = in[2:]
+			_ = readLine()
 			continue
 		}
 		ty := startsType()
@@ -138,13 +168,7 @@ func tokenize() []Token {
 				continue
 			}
 
-			str := in[0:1]
-			in = in[1:]
-			for len(in) > 0 && isAlnum(in[0]) {
-				str += in[0:1]
-				in = in[1:]
-			}
-
+			str := readChunk()
 			if tokens[len(tokens)-1].str == "\"" {
 				// String.
 				tokens = append(tokens, Token{TK_STRING, -1, str})

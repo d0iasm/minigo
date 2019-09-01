@@ -190,5 +190,11 @@ assert 99 'package main; func main() { hoge:="abc"; return hoge[2]; }'
 assert 99 'package main; var hoge string="abc"; func main() { return hoge[2]; }'
 #assert 98 'package main; func main() { hoge:=[2]string{"abc", "def"}; return hoge[0][1]; }'
 
+echo
+echo 'comments'
+echo
+assert 1 'package main; func main() { a:=1; // this is a comment.; return a; }'
+assert 1 'package main; var a int64=1; // function description.; func main() { return a; }'
+assert 1 'package main; var a int32=1; // function description.; func main() { return a; } // hoge.'
 
 echo OK

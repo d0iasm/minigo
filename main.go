@@ -21,7 +21,7 @@ func parseArgs() {
 
 	isDev = *devPtr
 
-	if buildPtr != nil {
+	if len(*buildPtr) > 0 {
 		if len(os.Args) < 1 {
 			panic("invalid number of arguments")
 		}

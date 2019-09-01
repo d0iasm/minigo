@@ -343,6 +343,7 @@ func program() (Program, string) {
 	assert("package")
 	tok := consumeToken(TK_IDENT)
 	pkgName := tok.str
+	consume(";")
 
 	funcs := make([]Function, 0)
 
