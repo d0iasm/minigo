@@ -207,6 +207,7 @@ func arrayLength() int {
 	return idx
 }
 
+// VarSpec = Identifier ( Type [ "=" Expression ] )
 func varSpec() Var {
 	tokId := consumeToken(TK_IDENT)
 	if tokId == nil {
@@ -355,6 +356,7 @@ func program() (Program, string) {
 	for len(tokens) > 0 {
 		if consume("func") {
 			funcs = append(funcs, function())
+			continue
 		}
 
 		// Global variable.
@@ -369,31 +371,13 @@ func program() (Program, string) {
 			}
 
 			if consume("=") {
-				length := arrayLength()
-				if length == -1 {
-					preStmts = append(preStmts, Assign{[]Expr{v}, []Expr{expr()}})
-					assert(";")
-					continue
-				}
-
-				// Multiple elements in an array.
-				assertType()
-				assert("{")
-
-				v.ty.aryLen = length
-
-				lvals := make([]Expr, length)
-				rvals := exprList()
-				// Expand left-side expressions.
-				for i := 0; i < length; i++ {
-					ity := newLiteralType("int64")
-					pty := newLiteralType("pointer")
-					lvals[i] = ArrayRef{v, IntLit{i, &ity}, &pty}
-				}
-				assert("}")
-				assert(";")
-				preStmts = append(preStmts, Assign{lvals, rvals})
+				preStmts = append(preStmts, assign(v))
 			}
+			continue
+		}
+
+		if consume(";") {
+			continue
 		}
 	}
 	ty := newLiteralType("int64")
@@ -425,6 +409,32 @@ func function() Function {
 	return Function{name, params, tmpLocals, stmts, len(tmpLocals) * 8}
 }
 
+func assign(v Var) Stmt {
+	length := arrayLength()
+	if length == -1 {
+		return Assign{[]Expr{v}, []Expr{expr()}}
+	}
+
+	// Multiple elements in an array.
+	assertType()
+	assert("{")
+
+	v.ty.aryLen = length
+	varOffset += ((v.ty.aryLen - 1) * 8)
+
+	lvals := make([]Expr, length)
+	rvals := exprList()
+	// Expand left-side expressions.
+	for i := 0; i < length; i++ {
+		ity := newLiteralType("int64")
+		pty := newLiteralType("pointer")
+		lvals[i] = ArrayRef{v, IntLit{i, &ity}, &pty}
+	}
+	assert("}")
+	consume(";")
+	return Assign{lvals, rvals}
+}
+
 func stmt() Stmt {
 	// Var declaration.
 	if consume("var") {
@@ -435,32 +445,12 @@ func stmt() Stmt {
 			panic(fmt.Sprintf("%s is already declared. No new variables\n", v.name))
 		}
 
+		//varOffset += (v.ty.aryLen * v.ty.size)
 		varOffset += (v.ty.aryLen * 8)
 		tmpLocals = append(tmpLocals, v)
 
 		if consume("=") {
-			length := arrayLength()
-			if length == -1 {
-				return Assign{[]Expr{v}, []Expr{expr()}}
-			}
-
-			// Multiple elements in an array.
-			assertType()
-			assert("{")
-
-			v.ty.aryLen = length
-			varOffset += ((v.ty.aryLen - 1) * 8)
-
-			lvals := make([]Expr, length)
-			rvals := exprList()
-			// Expand left-side expressions.
-			for i := 0; i < length; i++ {
-				ity := newLiteralType("int64")
-				pty := newLiteralType("pointer")
-				lvals[i] = ArrayRef{v, IntLit{i, &ity}, &pty}
-			}
-			assert("}")
-			return Assign{lvals, rvals}
+			return assign(v)
 		}
 		// Return Empty struct because of no assignment.
 		return Empty{}
@@ -525,29 +515,7 @@ func simpleStmt(exprN Expr) Stmt {
 
 		varOffset += (v.ty.aryLen * 8)
 		tmpLocals = append(tmpLocals, v)
-
-		length := arrayLength()
-		if length == -1 {
-			return Assign{[]Expr{v}, []Expr{expr()}}
-		}
-
-		// Multiple elements in an array.
-		assertType()
-		assert("{")
-
-		v.ty.aryLen = length
-		varOffset += ((v.ty.aryLen - 1) * 8)
-
-		lvals := make([]Expr, length)
-		rvals := exprList()
-		// Expand left-side expressions.
-		for i := 0; i < length; i++ {
-			ity := newLiteralType("int64")
-			pty := newLiteralType("pointer")
-			lvals[i] = ArrayRef{v, IntLit{i, &ity}, &pty}
-		}
-		assert("}")
-		return Assign{lvals, rvals}
+		return assign(v)
 	}
 
 	// Assignment statement.
