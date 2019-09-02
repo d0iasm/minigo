@@ -419,15 +419,16 @@ func assign(v Var) Stmt {
 	assertType()
 	assert("{")
 
-	v.ty.aryLen = length
+	ity := newLiteralType("int64")
+	aty := arrayOf(&ity, length)
+	v.setType(aty)
 	varOffset += ((v.ty.aryLen - 1) * 8)
 
 	lvals := make([]Expr, length)
 	rvals := exprList()
 	// Expand left-side expressions.
 	for i := 0; i < length; i++ {
-		ity := newLiteralType("int64")
-		pty := newLiteralType("pointer")
+		pty := pointerTo(&ity)
 		lvals[i] = ArrayRef{v, IntLit{i, &ity}, &pty}
 	}
 	assert("}")
@@ -590,8 +591,9 @@ func arrayref() Expr {
 	exprN := add()
 
 	if consume("[") {
-		ty := newNoneType()
-		exprN = ArrayRef{exprN, add(), &ty}
+		n := add()
+		ty := pointerTo(n.getType())
+		exprN = ArrayRef{exprN, n, &ty}
 		assert("]")
 	}
 	return exprN
@@ -682,15 +684,8 @@ func operand() Expr {
 			panic(fmt.Sprintf("undefined %s", varp.name))
 		}
 
-		// Index overflow.
-		// TODO: Now, accessing index over size is possible.
-		// e.g. hoge:="abc"; hoge[5] is possible because `hoge` doesn't have its type yet
-		// so there is no way to check string length or array length.
-		// if varp.ty.aryLen <= idx && varp.ty.kind != "string" {
-		//	panic(fmt.Sprintf("Invalid array index %d", idx))
-		//}
 		ity := newLiteralType("int64")
-		pty := newLiteralType("pointer")
+		pty := pointerTo(&ity)
 		return ArrayRef{*varp, IntLit{idx, &ity}, &pty}
 	}
 	return literal()
