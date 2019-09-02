@@ -20,8 +20,9 @@ const (
 
 type Type struct {
 	kind   TypeKind
-	length int
 	base   *Type
+	size   int // default is 0.
+	aryLen int // default is 1.
 }
 
 func typeKind(s string) TypeKind {
@@ -43,16 +44,39 @@ func typeKind(s string) TypeKind {
 	}
 }
 
-func newNoneType() Type {
-	return Type{typeKind("none"), 1, nil}
+func typeSize(k TypeKind) int {
+	switch k {
+	case TY_BOOL:
+		return 1
+	case TY_INT32:
+		return 4
+	case TY_INT64:
+		return 8
+	case TY_STRING:
+		return 0
+	case TY_PTR:
+		return 8
+	case TY_ARRAY:
+		return 0
+	default:
+		return 0
+	}
 }
 
-func newLiteralType(s string, l int) Type {
-	return Type{typeKind(s), l, nil}
+func newNoneType() Type {
+	return Type{TY_NONE, nil, 0, 1}
+}
+
+func newLiteralType(s string) Type {
+	return Type{typeKind(s), nil, typeSize(typeKind(s)), 1}
 }
 
 func pointerTo(base *Type) Type {
-	return Type{TY_PTR, 1, base}
+	return Type{TY_PTR, base, 8, 1}
+}
+
+func arrayOf(base *Type, length int) Type {
+	return Type{TY_ARRAY, base, length * typeSize(base.kind), length}
 }
 
 func supportType(s string) bool {
@@ -75,12 +99,12 @@ func addType(node interface{}) {
 		if n.ty.kind != TY_NONE {
 			return
 		}
-		n.setType(newLiteralType("int64", 1))
+		n.setType(newLiteralType("int64"))
 	case StringLit:
 		if n.ty.kind == TY_STRING {
 			return
 		}
-		n.setType(newLiteralType("string", 1))
+		n.setType(newLiteralType("string"))
 	case Addr:
 		addType(n.child)
 		n.setType(pointerTo(n.child.getType()))
@@ -90,16 +114,19 @@ func addType(node interface{}) {
 			n.setType(*n.child.getType().base)
 			return
 		}
-		n.setType(newLiteralType("int64", 1))
+		n.setType(newLiteralType("int64"))
 	case Binary:
 		addType(n.lhs)
 		addType(n.rhs)
 		typeCheck(n.lhs.getType(), n.rhs.getType(), n.op)
+		//if n.lhs.getType().kind == TY_PTR || n.rhs.getType().kind == TY_PTR {
+		//panic(fmt.Sprintf("invalid operation %#v %s %#v", n.lhs.getType(), n.op, n.rhs.getType()))
+		//}
 		switch n.op {
 		case "+", "-", "*", "/":
 			n.setType(*n.lhs.getType())
 		case "==", "!=", "<", "<=":
-			n.setType(newLiteralType("bool", 1))
+			n.setType(newLiteralType("bool"))
 		}
 	case Var:
 		// The type of variables are defined at Assgin node.
@@ -109,7 +136,7 @@ func addType(node interface{}) {
 		if n.ty.kind == TY_PTR {
 			return
 		}
-		n.setType(newLiteralType("pointer", 1))
+		n.setType(newLiteralType("pointer"))
 	case FuncCall:
 		for _, arg := range n.args {
 			addType(arg)

@@ -251,7 +251,7 @@ func emitData(prog Program) {
 
 	for _, g := range prog.globals {
 		fmt.Printf("%s:\n", g.name)
-		fmt.Printf("  .zero %d\n", g.ty.length*8)
+		fmt.Printf("  .zero %d\n", g.ty.aryLen*8)
 	}
 
 	for _, c := range prog.contents {

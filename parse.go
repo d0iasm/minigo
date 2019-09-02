@@ -228,7 +228,8 @@ func varSpec() Var {
 		panic(fmt.Sprintf("unsupported type %s\n", tokTy.str))
 	}
 
-	ty := newLiteralType(tokTy.str, length)
+	ty := newLiteralType(tokTy.str)
+	ty.aryLen = length
 	return Var{tokId.str, varOffset, true, &ty}
 }
 
@@ -296,7 +297,7 @@ func funcParams() []Var {
 	for {
 		v := varSpec()
 
-		varOffset += (v.ty.length * 8)
+		varOffset += (v.ty.aryLen * 8)
 		tmpLocals = append(tmpLocals, v)
 		params = append(params, v)
 
@@ -379,14 +380,14 @@ func program() (Program, string) {
 				assertType()
 				assert("{")
 
-				v.ty.length = length
+				v.ty.aryLen = length
 
 				lvals := make([]Expr, length)
 				rvals := exprList()
 				// Expand left-side expressions.
 				for i := 0; i < length; i++ {
-					ity := newLiteralType("int64", 1)
-					pty := newLiteralType("pointer", 1)
+					ity := newLiteralType("int64")
+					pty := newLiteralType("pointer")
 					lvals[i] = ArrayRef{v, IntLit{i, &ity}, &pty}
 				}
 				assert("}")
@@ -395,7 +396,7 @@ func program() (Program, string) {
 			}
 		}
 	}
-	ty := newLiteralType("int64", 1)
+	ty := newLiteralType("int64")
 	preStmts = append(preStmts, Return{IntLit{0, &ty}})
 	funcs[0].stmts = preStmts
 	return Program{globals, contents, funcs}, pkgName
@@ -434,7 +435,7 @@ func stmt() Stmt {
 			panic(fmt.Sprintf("%s is already declared. No new variables\n", v.name))
 		}
 
-		varOffset += (v.ty.length * 8)
+		varOffset += (v.ty.aryLen * 8)
 		tmpLocals = append(tmpLocals, v)
 
 		if consume("=") {
@@ -447,15 +448,15 @@ func stmt() Stmt {
 			assertType()
 			assert("{")
 
-			v.ty.length = length
-			varOffset += ((v.ty.length - 1) * 8)
+			v.ty.aryLen = length
+			varOffset += ((v.ty.aryLen - 1) * 8)
 
 			lvals := make([]Expr, length)
 			rvals := exprList()
 			// Expand left-side expressions.
 			for i := 0; i < length; i++ {
-				ity := newLiteralType("int64", 1)
-				pty := newLiteralType("pointer", 1)
+				ity := newLiteralType("int64")
+				pty := newLiteralType("pointer")
 				lvals[i] = ArrayRef{v, IntLit{i, &ity}, &pty}
 			}
 			assert("}")
@@ -522,7 +523,7 @@ func simpleStmt(exprN Expr) Stmt {
 			panic(fmt.Sprintf("%s is already declared. No new variables on left side of := \n", v.name))
 		}
 
-		varOffset += (v.ty.length * 8)
+		varOffset += (v.ty.aryLen * 8)
 		tmpLocals = append(tmpLocals, v)
 
 		length := arrayLength()
@@ -534,15 +535,15 @@ func simpleStmt(exprN Expr) Stmt {
 		assertType()
 		assert("{")
 
-		v.ty.length = length
-		varOffset += ((v.ty.length - 1) * 8)
+		v.ty.aryLen = length
+		varOffset += ((v.ty.aryLen - 1) * 8)
 
 		lvals := make([]Expr, length)
 		rvals := exprList()
 		// Expand left-side expressions.
 		for i := 0; i < length; i++ {
-			ity := newLiteralType("int64", 1)
-			pty := newLiteralType("pointer", 1)
+			ity := newLiteralType("int64")
+			pty := newLiteralType("pointer")
 			lvals[i] = ArrayRef{v, IntLit{i, &ity}, &pty}
 		}
 		assert("}")
@@ -584,7 +585,7 @@ func expr() Expr {
 func equality() Expr {
 	exprN := relational()
 
-	ty := newLiteralType("bool", 1)
+	ty := newLiteralType("bool")
 	for len(tokens) > 0 {
 		if consume("==") {
 			exprN = Binary{"==", exprN, relational(), &ty}
@@ -600,7 +601,7 @@ func equality() Expr {
 func relational() Expr {
 	exprN := arrayref()
 
-	ty := newLiteralType("bool", 1)
+	ty := newLiteralType("bool")
 	for len(tokens) > 0 {
 		if consume("<") {
 			exprN = Binary{"<", exprN, arrayref(), &ty}
@@ -666,7 +667,7 @@ func unary() Expr {
 		return unary()
 	} else if consume("-") {
 		// -val = 0 - val
-		ity := newLiteralType("int64", 1)
+		ity := newLiteralType("int64")
 		return Binary{"-", IntLit{0, &ity}, unary(), &nty}
 	} else if consume("&") {
 		return Addr{unary(), &nty}
@@ -717,11 +718,11 @@ func operand() Expr {
 		// TODO: Now, accessing index over size is possible.
 		// e.g. hoge:="abc"; hoge[5] is possible because `hoge` doesn't have its type yet
 		// so there is no way to check string length or array length.
-		//if varp.ty.length <= idx && varp.ty.kind != "string" {
+		// if varp.ty.aryLen <= idx && varp.ty.kind != "string" {
 		//	panic(fmt.Sprintf("Invalid array index %d", idx))
 		//}
-		ity := newLiteralType("int64", 1)
-		pty := newLiteralType("pointer", 1)
+		ity := newLiteralType("int64")
+		pty := newLiteralType("pointer")
 		return ArrayRef{*varp, IntLit{idx, &ity}, &pty}
 	}
 	return literal()
@@ -730,7 +731,7 @@ func operand() Expr {
 func literal() Expr {
 	// String literal.
 	if consume("\"") {
-		ty := newLiteralType("string", 1)
+		ty := newLiteralType("string")
 		n := StringLit{tokens[0].str, newLabel(), &ty}
 		contents = append(contents, n)
 		tokens = tokens[1:]
@@ -740,7 +741,7 @@ func literal() Expr {
 
 	// Character (int32).
 	if consume("'") {
-		ty := newLiteralType("int32", 1)
+		ty := newLiteralType("int32")
 		n := IntLit{tokens[0].val, &ty}
 		tokens = tokens[1:]
 		assert("'")
@@ -748,7 +749,7 @@ func literal() Expr {
 	}
 
 	// Integer literal.
-	ty := newLiteralType("int64", 1)
+	ty := newLiteralType("int64")
 	n := IntLit{tokens[0].val, &ty}
 	tokens = tokens[1:]
 	return n
