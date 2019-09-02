@@ -43,12 +43,12 @@ func typeKind(s string) TypeKind {
 	}
 }
 
-func newNoneType() *Type {
-	return &Type{typeKind("none"), 1, nil}
+func newNoneType() Type {
+	return Type{typeKind("none"), 1, nil}
 }
 
-func newLiteralType(s string, l int) *Type {
-	return &Type{typeKind(s), l, nil}
+func newLiteralType(s string, l int) Type {
+	return Type{typeKind(s), l, nil}
 }
 
 func pointerTo(base *Type) Type {
@@ -75,35 +75,31 @@ func addType(node interface{}) {
 		if n.ty.kind != TY_NONE {
 			return
 		}
-		n.ty = newLiteralType("int64", 1)
+		n.setType(newLiteralType("int64", 1))
 	case StringLit:
 		if n.ty.kind == TY_STRING {
 			return
 		}
-		n.ty = newLiteralType("string", 1)
+		n.setType(newLiteralType("string", 1))
 	case Addr:
 		addType(n.child)
-		if n.ty.kind == TY_PTR {
-			return
-		}
-		n.ty = newLiteralType("pointer", 1)
+		n.setType(pointerTo(n.child.getType()))
 	case Deref:
 		addType(n.child)
 		if n.child.getType().kind == TY_PTR {
-			// TODO: how to get the type of child of child?
-			n.ty = newLiteralType("int64", 1)
+			n.setType(*n.child.getType().base)
 			return
 		}
-		*n.ty = Type{n.child.getType().kind, n.child.getType().length, nil}
+		n.setType(newLiteralType("int64", 1))
 	case Binary:
 		addType(n.lhs)
 		addType(n.rhs)
 		typeCheck(n.lhs.getType(), n.rhs.getType(), n.op)
 		switch n.op {
 		case "+", "-", "*", "/":
-			*n.ty = Type{n.lhs.getType().kind, n.lhs.getType().length, nil}
+			n.setType(*n.lhs.getType())
 		case "==", "!=", "<", "<=":
-			n.ty = newLiteralType("bool", 1)
+			n.setType(newLiteralType("bool", 1))
 		}
 	case Var:
 		// The type of variables are defined at Assgin node.
@@ -113,7 +109,7 @@ func addType(node interface{}) {
 		if n.ty.kind == TY_PTR {
 			return
 		}
-		n.ty = newLiteralType("pointer", 1)
+		n.setType(newLiteralType("pointer", 1))
 	case FuncCall:
 		for _, arg := range n.args {
 			addType(arg)
