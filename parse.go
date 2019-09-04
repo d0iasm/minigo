@@ -428,8 +428,7 @@ func assign(v Var) Stmt {
 	rvals := exprList()
 	// Expand left-side expressions.
 	for i := 0; i < length; i++ {
-		pty := pointerTo(&ity)
-		lvals[i] = ArrayRef{v, IntLit{i, &ity}, &pty}
+		lvals[i] = ArrayRef{v, IntLit{i, &ity}, &aty}
 	}
 	assert("}")
 	consume(";")
@@ -568,33 +567,21 @@ func equality() Expr {
 }
 
 func relational() Expr {
-	exprN := arrayref()
+	exprN := add()
 
 	ty := newLiteralType("bool")
 	for len(tokens) > 0 {
 		if consume("<") {
-			exprN = Binary{"<", exprN, arrayref(), &ty}
+			exprN = Binary{"<", exprN, add(), &ty}
 		} else if consume("<=") {
-			exprN = Binary{"<=", exprN, arrayref(), &ty}
+			exprN = Binary{"<=", exprN, add(), &ty}
 		} else if consume(">") {
-			exprN = Binary{"<", arrayref(), exprN, &ty}
+			exprN = Binary{"<", add(), exprN, &ty}
 		} else if consume(">=") {
-			exprN = Binary{"<=", arrayref(), exprN, &ty}
+			exprN = Binary{"<=", add(), exprN, &ty}
 		} else {
 			return exprN
 		}
-	}
-	return exprN
-}
-
-func arrayref() Expr {
-	exprN := add()
-
-	if consume("[") {
-		n := add()
-		ty := pointerTo(n.getType())
-		exprN = ArrayRef{exprN, n, &ty}
-		assert("]")
 	}
 	return exprN
 }
@@ -644,7 +631,20 @@ func unary() Expr {
 	} else if consume("*") {
 		return Deref{unary(), &nty}
 	}
-	return operand()
+	return arrayref()
+}
+
+func arrayref() Expr {
+	exprN := operand()
+
+	// Right value.
+	if consume("[") {
+		n := expr()
+		ty := arrayOf(n.getType(), -1)
+		exprN = ArrayRef{exprN, n, &ty}
+		assert("]")
+	}
+	return exprN
 }
 
 // Operand = Literal | OperandName | "(" Expression ")" .
@@ -665,28 +665,14 @@ func operand() Expr {
 			return FuncCall{tok.str, funcArgs(), &nty}
 		}
 
-		// Ex. Get 2 in a[2], and get 1 in case of a normal varialbe.
-		idx := arrayLength()
-
 		// Variable.
 		// Not register to `tmpLocals` yet.
 		varp := findVar(tok.str)
-		if idx == -1 {
-			// Normal variable.
-			if varp == nil {
-				return Var{tok.str, varOffset, true, &nty}
-			}
-			return *varp
-		}
-
-		// Array reference should be declared beforehand.
+		// Normal variable.
 		if varp == nil {
-			panic(fmt.Sprintf("undefined %s", varp.name))
+			return Var{tok.str, varOffset, true, &nty}
 		}
-
-		ity := newLiteralType("int64")
-		pty := pointerTo(&ity)
-		return ArrayRef{*varp, IntLit{idx, &ity}, &pty}
+		return *varp
 	}
 	return literal()
 }

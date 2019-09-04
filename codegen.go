@@ -51,7 +51,7 @@ func genAddr(node interface{}) {
 		fmt.Printf("  push offset %s.obj\n", n.label)
 		return
 	}
-	panic("Not a lvalue")
+	panic(fmt.Sprintf("not a lvalue %#v", node))
 }
 
 func load(ty *Type) {
