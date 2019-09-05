@@ -207,6 +207,41 @@ func arrayLength() int {
 	return idx
 }
 
+func readTypePrefix(parent *Type) *Type {
+	if !consume("[") {
+		tok := consumeToken(TK_TYPE)
+		if tok == nil {
+			ty := newNoneType()
+			parent.base = &ty
+			return parent
+		}
+
+		if !supportType(tok.str) {
+			panic(fmt.Sprintf("unsupported type %s\n", tok.str))
+		}
+
+		ty := newLiteralType(tok.str)
+		parent.base = &ty
+		// only one parent has correct size.
+		parent.size = parent.aryLen * ty.size
+		return parent
+	}
+
+	ty := newLiteralType("array")
+	// only supports a fixed array.
+	ty.aryLen = tokens[0].val
+	// TODO: how to assign size? fixed int64 size now.
+	ty.size = ty.aryLen * 8
+	tokens = tokens[1:]
+	assert("]")
+
+	if parent != nil {
+		parent.base = &ty
+	}
+
+	return readTypePrefix(&ty)
+}
+
 // VarSpec = Identifier ( Type [ "=" Expression ] )
 func varSpec() Var {
 	tokId := consumeToken(TK_IDENT)
@@ -214,24 +249,11 @@ func varSpec() Var {
 		panic(fmt.Sprintf("expected an identifier but got %#v\n", tokId))
 	}
 
-	length := arrayLength()
-	if length == -1 {
-		length = 1
-	}
+	tmp := newNoneType() // Temporary head.
+	ty := readTypePrefix(&tmp)
+	ty = tmp.base
 
-	tokTy := consumeToken(TK_TYPE)
-	if tokTy == nil {
-		ty := newNoneType()
-		return Var{tokId.str, varOffset, true, &ty}
-	}
-
-	if !supportType(tokTy.str) {
-		panic(fmt.Sprintf("unsupported type %s\n", tokTy.str))
-	}
-
-	ty := newLiteralType(tokTy.str)
-	ty.aryLen = length
-	return Var{tokId.str, varOffset, true, &ty}
+	return Var{tokId.str, varOffset, true, ty}
 }
 
 func consume(op string) bool {
@@ -410,6 +432,8 @@ func function() Function {
 }
 
 func assign(v Var) Stmt {
+	//lvals := readVarSuffix(v)
+
 	length := arrayLength()
 	if length == -1 {
 		return Assign{[]Expr{v}, []Expr{expr()}}
@@ -418,7 +442,6 @@ func assign(v Var) Stmt {
 	// Multiple elements in an array.
 	assertType()
 	assert("{")
-
 	ity := newLiteralType("int64")
 	aty := arrayOf(&ity, length)
 	v.setType(aty)
@@ -634,17 +657,20 @@ func unary() Expr {
 	return arrayref()
 }
 
+func readVarSuffix(base Expr) Expr {
+	if !consume("[") {
+		return base
+	}
+
+	n := expr()
+	assert("]")
+	ty := arrayOf(base.getType(), -1)
+	return readVarSuffix(ArrayRef{base, n, &ty})
+}
+
 func arrayref() Expr {
 	exprN := operand()
-
-	// Right value.
-	if consume("[") {
-		n := expr()
-		ty := arrayOf(n.getType(), -1)
-		exprN = ArrayRef{exprN, n, &ty}
-		assert("]")
-	}
-	return exprN
+	return readVarSuffix(exprN)
 }
 
 // Operand = Literal | OperandName | "(" Expression ")" .

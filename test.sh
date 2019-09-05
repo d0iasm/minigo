@@ -192,8 +192,8 @@ assert 1 'package main; var a int32=1; // function description.; func main() { r
 echo
 echo 'multi-dimensional arrays'
 echo
-# TODO: support multi dimentional arrays.
-#assert 3 'package main; func main() { var x [2][2]int64; x[1][1]=3; return x[1][1]; }'
-#assert 98 'package main; func main() { hoge:=[2]string{"abc", "def"}; return hoge[0][1]; }'
+assert 42 'package main; var x [2][2]int64; func main() { return 42; }'
+assert 3 'package main; func main() { var x [2][2]int64; x[1][1]=3; return x[1][1]; }'
+assert 98 'package main; func main() { hoge:=[2]string{"abc", "def"}; return hoge[0][1]; }'
 
 echo OK
