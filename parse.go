@@ -4,8 +4,8 @@ import (
 	"fmt"
 )
 
-var globals []Var
-var tmpLocals []Var
+var globals []*Var
+var tmpLocals []*Var
 var varOffset int = 8
 
 var contents []StringLit
@@ -26,12 +26,12 @@ type Stmt interface {
 type Expr interface {
 	isExpr()
 	getType() *Type
-	setType(ty Type)
+	setType(ty *Type)
 }
 
 // -------------------- Top level program --------------------
 type Program struct {
-	globals  []Var
+	globals  []*Var
 	contents []StringLit
 	funcs    []Function
 }
@@ -39,13 +39,13 @@ type Program struct {
 // -------------------- Declarations --------------------
 type Function struct {
 	name      string
-	params    []Var
-	locals    []Var
+	params    []*Var
+	locals    []*Var
 	stmts     []Stmt
 	stackSize int
 }
 
-func (Function) isDecl() {}
+func (*Function) isDecl() {}
 
 // -------------------- Statements --------------------
 type ExprStmt struct {
@@ -82,13 +82,13 @@ type Assign struct {
 
 type Empty struct{} // It's also an expression
 
-func (Assign) isStmt()   {}
-func (Return) isStmt()   {}
-func (ExprStmt) isStmt() {}
-func (Block) isStmt()    {}
-func (If) isStmt()       {}
-func (For) isStmt()      {}
-func (Empty) isStmt()    {}
+func (*Assign) isStmt()   {}
+func (*Return) isStmt()   {}
+func (*ExprStmt) isStmt() {}
+func (*Block) isStmt()    {}
+func (*If) isStmt()       {}
+func (*For) isStmt()      {}
+func (*Empty) isStmt()    {}
 
 // -------------------- Expressions --------------------
 type IntLit struct {
@@ -136,45 +136,45 @@ type FuncCall struct {
 type Addr Unary
 type Deref Unary
 
-func (Binary) isExpr()    {}
-func (FuncCall) isExpr()  {}
-func (Var) isExpr()       {}
-func (Addr) isExpr()      {}
-func (Deref) isExpr()     {}
-func (ArrayRef) isExpr()  {}
-func (IntLit) isExpr()    {}
-func (StringLit) isExpr() {}
-func (Empty) isExpr()     {}
+func (*Binary) isExpr()    {}
+func (*FuncCall) isExpr()  {}
+func (*Var) isExpr()       {}
+func (*Addr) isExpr()      {}
+func (*Deref) isExpr()     {}
+func (*ArrayRef) isExpr()  {}
+func (*IntLit) isExpr()    {}
+func (*StringLit) isExpr() {}
+func (*Empty) isExpr()     {}
 
-func (b Binary) getType() *Type    { return b.ty }
-func (f FuncCall) getType() *Type  { return f.ty }
-func (v Var) getType() *Type       { return v.ty }
-func (a Addr) getType() *Type      { return a.ty }
-func (d Deref) getType() *Type     { return d.ty }
-func (a ArrayRef) getType() *Type  { return a.ty }
-func (i IntLit) getType() *Type    { return i.ty }
-func (s StringLit) getType() *Type { return s.ty }
-func (e Empty) getType() *Type     { return nil }
+func (b *Binary) getType() *Type    { return b.ty }
+func (f *FuncCall) getType() *Type  { return f.ty }
+func (v *Var) getType() *Type       { return v.ty }
+func (a *Addr) getType() *Type      { return a.ty }
+func (d *Deref) getType() *Type     { return d.ty }
+func (a *ArrayRef) getType() *Type  { return a.ty }
+func (i *IntLit) getType() *Type    { return i.ty }
+func (s *StringLit) getType() *Type { return s.ty }
+func (e *Empty) getType() *Type     { return nil }
 
-func (b Binary) setType(ty Type)    { *b.ty = ty }
-func (f FuncCall) setType(ty Type)  { *f.ty = ty }
-func (v Var) setType(ty Type)       { *v.ty = ty }
-func (a Addr) setType(ty Type)      { *a.ty = ty }
-func (d Deref) setType(ty Type)     { *d.ty = ty }
-func (a ArrayRef) setType(ty Type)  { *a.ty = ty }
-func (i IntLit) setType(ty Type)    { *i.ty = ty }
-func (s StringLit) setType(ty Type) { *s.ty = ty }
-func (e Empty) setType(ty Type)     {}
+func (b *Binary) setType(ty *Type)    { b.ty = ty }
+func (f *FuncCall) setType(ty *Type)  { f.ty = ty }
+func (v *Var) setType(ty *Type)       { v.ty = ty }
+func (a *Addr) setType(ty *Type)      { a.ty = ty }
+func (d *Deref) setType(ty *Type)     { d.ty = ty }
+func (a *ArrayRef) setType(ty *Type)  { a.ty = ty }
+func (i *IntLit) setType(ty *Type)    { i.ty = ty }
+func (s *StringLit) setType(ty *Type) { s.ty = ty }
+func (e *Empty) setType(ty *Type)     {}
 
 func findVar(name string) *Var {
 	for _, v := range globals {
 		if v.name == name {
-			return &v
+			return v
 		}
 	}
 	for _, v := range tmpLocals {
 		if v.name == name {
-			return &v
+			return v
 		}
 	}
 	return nil
@@ -222,16 +222,12 @@ func readTypePrefix(parent *Type) *Type {
 
 		ty := newLiteralType(tok.str)
 		parent.base = &ty
-		// only one parent has correct size.
-		parent.size = parent.aryLen * ty.size
 		return parent
 	}
 
 	ty := newLiteralType("array")
 	// only supports a fixed array.
 	ty.aryLen = tokens[0].val
-	// TODO: how to assign size? fixed int64 size now.
-	ty.size = ty.aryLen * 8
 	tokens = tokens[1:]
 	assert("]")
 
@@ -243,7 +239,7 @@ func readTypePrefix(parent *Type) *Type {
 }
 
 // VarSpec = Identifier ( Type [ "=" Expression ] )
-func varSpec() Var {
+func varSpec() *Var {
 	tokId := consumeToken(TK_IDENT)
 	if tokId == nil {
 		panic(fmt.Sprintf("expected an identifier but got %#v\n", tokId))
@@ -253,7 +249,7 @@ func varSpec() Var {
 	ty := readTypePrefix(&tmp)
 	ty = tmp.base
 
-	return Var{tokId.str, varOffset, true, ty}
+	return &Var{tokId.str, varOffset, true, ty}
 }
 
 func consume(op string) bool {
@@ -311,8 +307,8 @@ func funcArgs() []Expr {
 	return args
 }
 
-func funcParams() []Var {
-	params := make([]Var, 0)
+func funcParams() []*Var {
+	params := make([]*Var, 0)
 	if next(")") {
 		return params
 	}
@@ -374,7 +370,7 @@ func program() (Program, string) {
 	funcs := make([]Function, 0)
 
 	preStmts := make([]Stmt, 0)
-	funcs = append(funcs, Function{"preMain", []Var{}, []Var{}, nil, 8})
+	funcs = append(funcs, Function{"preMain", []*Var{}, []*Var{}, nil, 8})
 	for len(tokens) > 0 {
 		if consume("func") {
 			funcs = append(funcs, function())
@@ -403,7 +399,7 @@ func program() (Program, string) {
 		}
 	}
 	ty := newLiteralType("int64")
-	preStmts = append(preStmts, Return{IntLit{0, &ty}})
+	preStmts = append(preStmts, &Return{&IntLit{0, &ty}})
 	funcs[0].stmts = preStmts
 	return Program{globals, contents, funcs}, pkgName
 }
@@ -411,7 +407,7 @@ func program() (Program, string) {
 func function() Function {
 	// Initialize for a function.
 	varOffset = 8
-	tmpLocals = make([]Var, 0)
+	tmpLocals = make([]*Var, 0)
 
 	tok := consumeToken(TK_IDENT)
 	if tok == nil {
@@ -431,31 +427,30 @@ func function() Function {
 	return Function{name, params, tmpLocals, stmts, len(tmpLocals) * 8}
 }
 
-func assign(v Var) Stmt {
+func assign(v *Var) Stmt {
 	//lvals := readVarSuffix(v)
 
 	length := arrayLength()
 	if length == -1 {
-		return Assign{[]Expr{v}, []Expr{expr()}}
+		return &Assign{[]Expr{v}, []Expr{expr()}}
 	}
 
-	// Multiple elements in an array.
+	// Only supports initialization for one-dimentional array.
 	assertType()
 	assert("{")
-	ity := newLiteralType("int64")
-	aty := arrayOf(&ity, length)
-	v.setType(aty)
+	ty := newNoneType()
+	v.setType(&ty)
 	varOffset += ((v.ty.aryLen - 1) * 8)
 
 	lvals := make([]Expr, length)
 	rvals := exprList()
 	// Expand left-side expressions.
 	for i := 0; i < length; i++ {
-		lvals[i] = ArrayRef{v, IntLit{i, &ity}, &aty}
+		lvals[i] = &ArrayRef{v, &IntLit{i, &ty}, &ty}
 	}
 	assert("}")
 	consume(";")
-	return Assign{lvals, rvals}
+	return &Assign{lvals, rvals}
 }
 
 func stmt() Stmt {
@@ -476,12 +471,12 @@ func stmt() Stmt {
 			return assign(v)
 		}
 		// Return Empty struct because of no assignment.
-		return Empty{}
+		return &Empty{}
 	}
 
 	// Return statement.
 	if consume("return") {
-		return Return{expr()}
+		return &Return{expr()}
 	}
 
 	// Block.
@@ -490,7 +485,7 @@ func stmt() Stmt {
 		for !consume("}") {
 			stmts = append(stmts, stmt())
 		}
-		return Block{stmts}
+		return &Block{stmts}
 	}
 
 	// If statement.
@@ -509,13 +504,13 @@ func stmt() Stmt {
 				assert("if / {")
 			}
 		}
-		return ifstmt
+		return &ifstmt
 	}
 
 	// For statement.
 	if consume("for") {
 		init, cond, post := forHeaders()
-		return For{init, cond, post, stmt()}
+		return &For{init, cond, post, stmt()}
 	}
 
 	return simpleStmt(expr())
@@ -523,13 +518,13 @@ func stmt() Stmt {
 
 func simpleStmt(exprN Expr) Stmt {
 	switch exprN.(type) {
-	case Empty:
-		return Empty{}
+	case *Empty:
+		return &Empty{}
 	}
 
 	// Identifier declaration.
 	if consume(":=") {
-		v := exprN.(Var)
+		v := exprN.(*Var)
 
 		varp := findVar(v.name)
 		if varp != nil {
@@ -544,17 +539,17 @@ func simpleStmt(exprN Expr) Stmt {
 	// Assignment statement.
 	if consume("=") {
 		switch v := exprN.(type) {
-		case Var:
+		case *Var:
 			varp := findVar(v.name)
 			if varp == nil {
 				panic(fmt.Sprintf("undefined: %s\n", v.name))
 			}
 		}
-		return Assign{[]Expr{exprN}, []Expr{expr()}}
+		return &Assign{[]Expr{exprN}, []Expr{expr()}}
 	}
 
 	// Expression statement.
-	return ExprStmt{exprN}
+	return &ExprStmt{exprN}
 }
 
 func exprList() []Expr {
@@ -568,7 +563,7 @@ func exprList() []Expr {
 
 func expr() Expr {
 	if consume(";") {
-		return Empty{}
+		return &Empty{}
 	}
 	return equality()
 }
@@ -579,9 +574,9 @@ func equality() Expr {
 	ty := newLiteralType("bool")
 	for len(tokens) > 0 {
 		if consume("==") {
-			exprN = Binary{"==", exprN, relational(), &ty}
+			exprN = &Binary{"==", exprN, relational(), &ty}
 		} else if consume("!=") {
-			exprN = Binary{"!=", exprN, relational(), &ty}
+			exprN = &Binary{"!=", exprN, relational(), &ty}
 		} else {
 			return exprN
 		}
@@ -595,13 +590,13 @@ func relational() Expr {
 	ty := newLiteralType("bool")
 	for len(tokens) > 0 {
 		if consume("<") {
-			exprN = Binary{"<", exprN, add(), &ty}
+			exprN = &Binary{"<", exprN, add(), &ty}
 		} else if consume("<=") {
-			exprN = Binary{"<=", exprN, add(), &ty}
+			exprN = &Binary{"<=", exprN, add(), &ty}
 		} else if consume(">") {
-			exprN = Binary{"<", add(), exprN, &ty}
+			exprN = &Binary{"<", add(), exprN, &ty}
 		} else if consume(">=") {
-			exprN = Binary{"<=", add(), exprN, &ty}
+			exprN = &Binary{"<=", add(), exprN, &ty}
 		} else {
 			return exprN
 		}
@@ -615,9 +610,9 @@ func add() Expr {
 	ty := newNoneType()
 	for len(tokens) > 0 {
 		if consume("+") {
-			exprN = Binary{"+", exprN, mul(), &ty}
+			exprN = &Binary{"+", exprN, mul(), &ty}
 		} else if consume("-") {
-			exprN = Binary{"-", exprN, mul(), &ty}
+			exprN = &Binary{"-", exprN, mul(), &ty}
 		} else {
 			return exprN
 		}
@@ -631,9 +626,9 @@ func mul() Expr {
 	ty := newNoneType()
 	for len(tokens) > 0 {
 		if consume("*") {
-			exprN = Binary{"*", exprN, unary(), &ty}
+			exprN = &Binary{"*", exprN, unary(), &ty}
 		} else if consume("/") {
-			exprN = Binary{"/", exprN, unary(), &ty}
+			exprN = &Binary{"/", exprN, unary(), &ty}
 		} else {
 			return exprN
 		}
@@ -648,11 +643,11 @@ func unary() Expr {
 	} else if consume("-") {
 		// -val = 0 - val
 		ity := newLiteralType("int64")
-		return Binary{"-", IntLit{0, &ity}, unary(), &nty}
+		return &Binary{"-", &IntLit{0, &ity}, unary(), &nty}
 	} else if consume("&") {
-		return Addr{unary(), &nty}
+		return &Addr{unary(), &nty}
 	} else if consume("*") {
-		return Deref{unary(), &nty}
+		return &Deref{unary(), &nty}
 	}
 	return arrayref()
 }
@@ -662,10 +657,11 @@ func readVarSuffix(base Expr) Expr {
 		return base
 	}
 
+	// only supports a fixed array.
 	n := expr()
 	assert("]")
-	ty := arrayOf(base.getType(), -1)
-	return readVarSuffix(ArrayRef{base, n, &ty})
+	ty := newNoneType()
+	return readVarSuffix(&ArrayRef{base, n, &ty})
 }
 
 func arrayref() Expr {
@@ -688,17 +684,19 @@ func operand() Expr {
 		nty := newNoneType()
 		// Function call.
 		if consume("(") {
-			return FuncCall{tok.str, funcArgs(), &nty}
+			return &FuncCall{tok.str, funcArgs(), &nty}
 		}
 
 		// Variable.
 		// Not register to `tmpLocals` yet.
 		varp := findVar(tok.str)
+
 		// Normal variable.
 		if varp == nil {
-			return Var{tok.str, varOffset, true, &nty}
+			a := Var{tok.str, varOffset, true, &nty}
+			return &a
 		}
-		return *varp
+		return varp
 	}
 	return literal()
 }
@@ -711,7 +709,7 @@ func literal() Expr {
 		contents = append(contents, n)
 		tokens = tokens[1:]
 		assert("\"")
-		return n
+		return &n
 	}
 
 	// Character (int32).
@@ -720,12 +718,12 @@ func literal() Expr {
 		n := IntLit{tokens[0].val, &ty}
 		tokens = tokens[1:]
 		assert("'")
-		return n
+		return &n
 	}
 
 	// Integer literal.
 	ty := newLiteralType("int64")
 	n := IntLit{tokens[0].val, &ty}
 	tokens = tokens[1:]
-	return n
+	return &n
 }

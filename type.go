@@ -92,66 +92,79 @@ func typeCheck(lty *Type, rty *Type, op string) {
 	}
 }
 
+func fillSize(ty *Type) {
+	if ty == nil || ty.kind != TY_ARRAY {
+		return
+	}
+	fillSize(ty.base)
+	ty.size = ty.aryLen * ty.base.size
+}
+
 func addType(node interface{}) {
 	switch n := node.(type) {
 	// Expressions. It should have Type field.
-	case IntLit:
+	case *IntLit:
 		if n.ty.kind != TY_NONE {
 			return
 		}
-		n.setType(newLiteralType("int64"))
-	case StringLit:
+		ty := newLiteralType("int64")
+		n.setType(&ty)
+	case *StringLit:
 		if n.ty.kind == TY_STRING {
 			return
 		}
-		n.setType(newLiteralType("string"))
-	case Addr:
+		ty := newLiteralType("string")
+		n.setType(&ty)
+	case *Addr:
 		addType(n.child)
-		n.setType(pointerTo(n.child.getType()))
-	case Deref:
+		ty := pointerTo(n.child.getType())
+		n.setType(&ty)
+	case *Deref:
 		addType(n.child)
 		if n.child.getType().kind == TY_PTR {
-			n.setType(*n.child.getType().base)
+			n.setType(n.child.getType().base)
 			return
 		}
-		n.setType(newLiteralType("int64"))
-	case Binary:
+		ty := newLiteralType("int64")
+		n.setType(&ty)
+	case *Binary:
 		addType(n.lhs)
 		addType(n.rhs)
 		typeCheck(n.lhs.getType(), n.rhs.getType(), n.op)
-		//if n.lhs.getType().kind == TY_PTR || n.rhs.getType().kind == TY_PTR {
-		//panic(fmt.Sprintf("invalid operation %#v %s %#v", n.lhs.getType(), n.op, n.rhs.getType()))
-		//}
 		switch n.op {
 		case "+", "-", "*", "/":
-			n.setType(*n.lhs.getType())
+			n.setType(n.lhs.getType())
 		case "==", "!=", "<", "<=":
-			n.setType(newLiteralType("bool"))
+			ty := newLiteralType("bool")
+			n.setType(&ty)
 		}
-	case Var:
-		// The type of variables are defined at Assgin node.
-	case ArrayRef:
+	case *Var:
+		// Types except array are defined at Assgin node.
+		if n.ty.kind == TY_ARRAY {
+			fillSize(n.ty)
+		}
+	case *ArrayRef:
 		addType(n.lhs)
 		addType(n.rhs)
-		if n.ty.kind == TY_PTR {
-			return
+		if n.lhs.getType().kind == TY_ARRAY {
+			ty := n.lhs.getType()
+			n.setType(ty.base)
 		}
-		n.setType(newLiteralType("pointer"))
-	case FuncCall:
+	case *FuncCall:
 		for _, arg := range n.args {
 			addType(arg)
 		}
 	// Statements.
-	case Empty:
-	case ExprStmt:
+	case *Empty:
+	case *ExprStmt:
 		addType(n.child)
-	case Return:
+	case *Return:
 		addType(n.child)
-	case Block:
+	case *Block:
 		for _, c := range n.children {
 			addType(c)
 		}
-	case If:
+	case *If:
 		if n.init != nil {
 			addType(n.init)
 		}
@@ -160,7 +173,7 @@ func addType(node interface{}) {
 		if n.els != nil {
 			addType(n.els)
 		}
-	case For:
+	case *For:
 		if !isEmpty(n.init) {
 			addType(n.init)
 		}
@@ -171,17 +184,19 @@ func addType(node interface{}) {
 		if !isEmpty(n.post) {
 			addType(n.post)
 		}
-	case Assign:
+	case *Assign:
 		if len(n.lvals) != len(n.rvals) {
 			panic(fmt.Sprintf("not same length %d != %d", len(n.lvals), len(n.rvals)))
 		}
 		for i := range n.lvals {
-			// Add type from right-side node.
+			addType(n.lvals[i])
 			addType(n.rvals[i])
 			if n.lvals[i].getType().kind == TY_NONE {
-				n.lvals[i].setType(*n.rvals[i].getType())
+				n.lvals[i].setType(n.rvals[i].getType())
 			}
-			addType(n.lvals[i])
+			if n.rvals[i].getType().kind == TY_NONE {
+				n.rvals[i].setType(n.lvals[i].getType())
+			}
 		}
 	default:
 		panic(fmt.Sprintf("unexpected node type %#v", n))

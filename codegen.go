@@ -16,7 +16,7 @@ var funcname string
 
 func genAddr(node interface{}) {
 	switch n := node.(type) {
-	case Var:
+	case *Var:
 		if n.isLocal {
 			fmt.Printf("  lea rax, [rbp-%d]\n", n.offset)
 			fmt.Printf("  push rax\n")
@@ -24,10 +24,10 @@ func genAddr(node interface{}) {
 			fmt.Printf("  push offset %s\n", n.name)
 		}
 		return
-	case Deref:
+	case *Deref:
 		gen(n.child)
 		return
-	case ArrayRef:
+	case *ArrayRef:
 		if n.lhs.getType().kind != TY_STRING {
 			genAddr(n.lhs)
 			gen(n.rhs)
@@ -47,7 +47,7 @@ func genAddr(node interface{}) {
 		fmt.Printf("  add rax, rdi\n")
 		fmt.Printf("  push rax\n")
 		return
-	case StringLit:
+	case *StringLit:
 		fmt.Printf("  push offset %s.obj\n", n.label)
 		return
 	}
@@ -77,7 +77,7 @@ func isEmpty(node interface{}) bool {
 		return true
 	}
 	switch node.(type) {
-	case Empty:
+	case *Empty:
 		return true
 	}
 	return false
@@ -85,20 +85,20 @@ func isEmpty(node interface{}) bool {
 
 func gen(node interface{}) {
 	switch n := node.(type) {
-	case Empty:
+	case *Empty:
 		return
-	case IntLit:
+	case *IntLit:
 		fmt.Printf("  push %d\n", n.val)
 		return
-	case StringLit:
+	case *StringLit:
 		//fmt.Printf("  push %d\n", len(n.val))
 		fmt.Printf("  push offset %s\n", n.label)
 		return
-	case Var:
+	case *Var:
 		genAddr(n)
 		load(n.ty)
 		return
-	case Assign:
+	case *Assign:
 		if len(n.lvals) != len(n.rvals) {
 			panic(fmt.Sprintf("Not same length %d != %d", len(n.lvals), len(n.rvals)))
 		}
@@ -108,28 +108,28 @@ func gen(node interface{}) {
 			store()
 		}
 		return
-	case Addr:
+	case *Addr:
 		genAddr(n.child)
 		return
-	case Deref:
+	case *Deref:
 		gen(n.child)
 		load(n.ty)
 		return
-	case ArrayRef:
+	case *ArrayRef:
 		genAddr(n)
 		load(n.lhs.getType())
 		return
-	case Block:
+	case *Block:
 		for _, c := range n.children {
 			gen(c)
 		}
 		return
-	case ExprStmt:
+	case *ExprStmt:
 		gen(n.child)
 		// Throw away the result of an expression.
 		fmt.Printf("  add rsp, 8\n")
 		return
-	case If:
+	case *If:
 		seq := labelseq
 		labelseq++
 		if n.init != nil {
@@ -154,7 +154,7 @@ func gen(node interface{}) {
 			fmt.Printf(".Lend%d:\n", seq)
 		}
 		return
-	case For:
+	case *For:
 		seq := labelseq
 		labelseq++
 		if !isEmpty(n.init) {
@@ -174,12 +174,12 @@ func gen(node interface{}) {
 		fmt.Printf("  jmp .Lbegin%d\n", seq)
 		fmt.Printf(".Lend%d:\n", seq)
 		return
-	case Return:
+	case *Return:
 		gen(n.child)
 		fmt.Printf("  pop rax\n")
 		fmt.Printf("  jmp .Lreturn.%s\n", funcname)
 		return
-	case FuncCall:
+	case *FuncCall:
 		for _, arg := range n.args {
 			gen(arg)
 		}
@@ -208,7 +208,7 @@ func gen(node interface{}) {
 		return
 	}
 
-	n := node.(Binary)
+	n := node.(*Binary)
 	gen(n.lhs)
 	gen(n.rhs)
 	fmt.Printf("  pop rdi\n")

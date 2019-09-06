@@ -25,58 +25,58 @@ func printNode(node interface{}, dep int) {
 
 	switch n := node.(type) {
 	// Expressions.
-	case StringLit:
+	case *StringLit:
 		fmt.Printf("dep: %d, node: %#v, \n        type: %#v \n", dep, n, n.ty)
-	case IntLit:
+	case *IntLit:
 		fmt.Printf("dep: %d, node: %#v, \n        type: %#v \n", dep, n, n.ty)
-	case Addr:
-		fmt.Printf("dep: %d, node: %#v, \n        type: %#v \n", dep, n, n.ty)
-		printNode(n.child, dep+1)
-	case Deref:
+	case *Addr:
 		fmt.Printf("dep: %d, node: %#v, \n        type: %#v \n", dep, n, n.ty)
 		printNode(n.child, dep+1)
-	case Binary:
+	case *Deref:
+		fmt.Printf("dep: %d, node: %#v, \n        type: %#v \n", dep, n, n.ty)
+		printNode(n.child, dep+1)
+	case *Binary:
 		fmt.Printf("dep: %d, node: %#v, \n        type: %#v \n", dep, n, n.ty)
 		printNode(n.lhs, dep+1)
 		printNode(n.rhs, dep+1)
-	case Var:
+	case *Var:
 		fmt.Printf("dep: %d, node: %#v, \n        type: %#v \n", dep, n, n.ty)
-	case ArrayRef:
+	case *ArrayRef:
 		fmt.Printf("dep: %d, node: %#v, \n        type: %#v \n", dep, n, n.ty)
 		printNode(n.lhs, dep+1)
 		printNode(n.rhs, dep+1)
-	case FuncCall:
+	case *FuncCall:
 		fmt.Printf("dep: %d, node: %#v, \n        type: %#v \n", dep, n, n.ty)
 		for _, arg := range n.args {
 			printNode(arg, dep+1)
 		}
 	// Statements.
-	case Empty:
+	case *Empty:
 		fmt.Printf("dep: %d, node: %#v\n", dep, n)
-	case ExprStmt:
-		fmt.Printf("dep: %d, node: %#v\n", dep, n)
-		printNode(n.child, dep+1)
-	case Return:
+	case *ExprStmt:
 		fmt.Printf("dep: %d, node: %#v\n", dep, n)
 		printNode(n.child, dep+1)
-	case Block:
+	case *Return:
+		fmt.Printf("dep: %d, node: %#v\n", dep, n)
+		printNode(n.child, dep+1)
+	case *Block:
 		fmt.Printf("dep: %d, node: %#v\n", dep, n)
 		for _, c := range n.children {
 			printNode(c, dep+1)
 		}
-	case Assign:
+	case *Assign:
 		fmt.Printf("dep: %d, node: %#v\n", dep, n)
 		for i := range n.lvals {
 			printNode(n.lvals[i], dep+1)
 			printNode(n.rvals[i], dep+1)
 		}
-	case If:
+	case *If:
 		fmt.Printf("dep: %d, node: %#v\n", dep, n)
 		printNode(n.init, dep+1)
 		printNode(n.cond, dep+1)
 		printNode(n.then, dep+1)
 		printNode(n.els, dep+1)
-	case For:
+	case *For:
 		fmt.Printf("dep: %d, node: %#v\n", dep, n)
 		printNode(n.init, dep+1)
 		printNode(n.cond, dep+1)
