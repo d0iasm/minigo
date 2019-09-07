@@ -400,6 +400,9 @@ func program() (Program, string) {
 	}
 	ty := newLiteralType("int64")
 	preStmts = append(preStmts, &Return{&IntLit{0, &ty}})
+	for _, s := range preStmts {
+		addType(s)
+	}
 	funcs[0].stmts = preStmts
 	return Program{globals, contents, funcs}, pkgName
 }
@@ -436,11 +439,19 @@ func assign(v *Var) Stmt {
 	}
 
 	// Only supports initialization for one-dimentional array.
-	assertType()
+	tystr := assertType()
 	assert("{")
 	ty := newNoneType()
-	v.setType(&ty)
-	varOffset += ((v.ty.aryLen - 1) * 8)
+	if v.isLocal {
+		varOffset += ((v.ty.aryLen - 1) * 8)
+	}
+
+	// Type inference `:=`.
+	if v.ty.kind == TY_NONE {
+		base := newLiteralType(tystr)
+		ty := arrayOf(&base, length)
+		v.setType(&ty)
+	}
 
 	lvals := make([]Expr, length)
 	rvals := exprList()

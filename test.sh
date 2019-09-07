@@ -149,9 +149,9 @@ echo
 assert 1 'package main; func main() { var x [2]int64; x[0]=1; x[1]=2; return x[0]; }'
 assert 2 'package main; func main() { var x [2]int64; x[0]=1; x[1]=2; return x[1]; }'
 assert 3 'package main; func main() { var x [2]int64; x[0]=2; x[1]=5; return x[1]-x[0]; }'
-#assert 2 'package main; func main() { var x [2]int64 = [2]int64{1, 2}; return x[1]; }'
-#assert 3 'package main; func main() { x:=[2]int64{2, 5}; return x[1]-x[0]; }'
-#assert 2 'package main; var x[2]int64=[2]int64{1,3}; func main() { return x[1]-x[0]; }'
+assert 2 'package main; func main() { var x [2]int64 = [2]int64{1, 2}; return x[1]; }'
+assert 3 'package main; func main() { x:=[2]int64{2, 5}; return x[1]-x[0]; }'
+assert 2 'package main; var x[2]int64=[2]int64{1,3}; func main() { return x[1]-x[0]; }'
 
 echo
 echo 'global variables'
