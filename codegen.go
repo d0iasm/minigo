@@ -31,9 +31,9 @@ func genAddr(node interface{}) {
 		if n.lhs.getType().kind != TY_STRING {
 			genAddr(n.lhs)
 			gen(n.rhs)
-			fmt.Printf("  pop rdi\n")
-			fmt.Printf("  pop rax\n")
-			fmt.Printf("  imul rdi, %d\n", 8)
+			fmt.Printf("  pop rdi\n") // index stored in right-side node.
+			fmt.Printf("  pop rax\n") // address stored in left-size node.
+			fmt.Printf("  imul rdi, %d\n", n.ty.size)
 			fmt.Printf("  add rax, rdi\n")
 			fmt.Printf("  push rax\n")
 			return
@@ -41,8 +41,8 @@ func genAddr(node interface{}) {
 
 		genAddr(n.lhs)
 		gen(n.rhs)
-		fmt.Printf("  pop rdi\n") // Index.
-		fmt.Printf("  pop rax\n") // Pointer to string object.
+		fmt.Printf("  pop rdi\n") // index stored in right-size node.
+		fmt.Printf("  pop rax\n") // pointer to string object stored in left-size node.
 		fmt.Printf("  mov rax, [rax]\n")
 		fmt.Printf("  add rax, rdi\n")
 		fmt.Printf("  push rax\n")
