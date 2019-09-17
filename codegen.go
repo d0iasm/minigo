@@ -56,7 +56,6 @@ func genAddr(node interface{}) {
 
 func load(ty *Type) {
 	fmt.Printf("  pop rax\n")
-	//fmt.Printf("\n%#v\n", ty)
 	if ty.kind == TY_STRING {
 		fmt.Printf("  movzx rax, byte ptr [rax]\n")
 	} else {
@@ -91,8 +90,7 @@ func gen(node interface{}) {
 		fmt.Printf("  push %d\n", n.val)
 		return
 	case *StringLit:
-		//fmt.Printf("  push %d\n", len(n.val))
-		fmt.Printf("  push offset %s\n", n.label)
+		fmt.Printf("  push offset %s.obj\n", n.label)
 		return
 	case *Var:
 		genAddr(n)
@@ -206,6 +204,12 @@ func gen(node interface{}) {
 		fmt.Printf(".Lend%d:\n", seq)
 		fmt.Printf("  push rax\n")
 		return
+	case *Stdlib:
+		for _, arg := range n.args {
+			gen(arg)
+		}
+		fmt.Printf("  call %s\n", n.name)
+		return
 	}
 
 	n := node.(*Binary)
@@ -259,7 +263,32 @@ func emitData(prog Program) {
 		fmt.Printf("  .string \"%s\"\n", c.val)
 		fmt.Printf("%s.obj:\n", c.label)
 		fmt.Printf("  .quad %s\n", c.label)
+		fmt.Printf("  .quad %d\n", len(c.val))
 	}
+}
+
+func emitStdlibs() {
+	// ssize_t write(int fd, const void *buf, size_t count);
+	fmt.Printf("println:\n")
+	// Prologue.
+	fmt.Printf("  push rbp\n")
+	fmt.Printf("  mov rbp, rsp\n")
+
+	fmt.Printf("  mov rsi, [rbp+16]\n")
+	fmt.Printf("  mov rdx, [rsi+8]\n")
+	fmt.Printf("  mov rsi, [rsi]\n")
+	fmt.Printf("  mov rdi, 1\n")
+
+	fmt.Printf("  call write\n")
+
+	// Newline.
+	fmt.Printf("  mov rdi,  '\\n'\n")
+	fmt.Printf("  call putchar\n")
+
+	// Epilogue.
+	fmt.Printf("  mov rsp, rbp\n")
+	fmt.Printf("  pop rbp\n")
+	fmt.Printf("  ret\n")
 }
 
 func emitText(prog Program) {
@@ -268,6 +297,8 @@ func emitText(prog Program) {
 	for _, f := range prog.funcs {
 		fmt.Printf(".global %s\n", f.name)
 	}
+
+	emitStdlibs()
 
 	for _, f := range prog.funcs {
 		funcname = f.name

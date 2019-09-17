@@ -49,11 +49,13 @@ func typeSize(k TypeKind) int {
 	case TY_BOOL:
 		return 1
 	case TY_INT32:
-		return 4
+		return 8
+		// TODO: varOffset sets depending on type's size.
+		//return 4
 	case TY_INT64:
 		return 8
 	case TY_STRING:
-		return 0
+		return 8
 	case TY_PTR:
 		return 8
 	case TY_ARRAY:
@@ -197,6 +199,10 @@ func addType(node interface{}) {
 			if n.rvals[i].getType().kind == TY_NONE {
 				n.rvals[i].setType(n.lvals[i].getType())
 			}
+		}
+	case *Stdlib:
+		for _, arg := range n.args {
+			addType(arg)
 		}
 	default:
 		panic(fmt.Sprintf("unexpected node type %#v", n))

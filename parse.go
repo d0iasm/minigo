@@ -166,6 +166,17 @@ func (i *IntLit) setType(ty *Type)    { i.ty = ty }
 func (s *StringLit) setType(ty *Type) { s.ty = ty }
 func (e *Empty) setType(ty *Type)     {}
 
+// -------------------- Stdlibs --------------------
+type Stdlib struct {
+	name string
+	args []Expr
+}
+
+func (*Stdlib) isStmt()          {}
+func (*Stdlib) isExpr()          {}
+func (*Stdlib) getType() *Type   { return nil }
+func (*Stdlib) setType(ty *Type) {}
+
 func findVar(name string) *Var {
 	for _, v := range globals {
 		if v.name == name {
@@ -184,15 +195,6 @@ func newLabel() string {
 	l := fmt.Sprintf(".L.data.%d", contentCnt)
 	contentCnt++
 	return l
-}
-
-func getContent(s string) *StringLit {
-	for _, c := range contents {
-		if c.val == s {
-			return &c
-		}
-	}
-	return nil
 }
 
 func arrayLength() int {
@@ -407,6 +409,14 @@ func program() (Program, string) {
 	return Program{globals, contents, funcs}, pkgName
 }
 
+func stackSize(locals []*Var) int {
+	size := 0
+	for _, l := range locals {
+		size += l.ty.size
+	}
+	return size
+}
+
 func function() Function {
 	// Initialize for a function.
 	varOffset = 8
@@ -427,7 +437,7 @@ func function() Function {
 		addType(s)
 		stmts = append(stmts, s)
 	}
-	return Function{name, params, tmpLocals, stmts, len(tmpLocals) * 8}
+	return Function{name, params, tmpLocals, stmts, stackSize(tmpLocals)}
 }
 
 func assign(v *Var) Stmt {
@@ -465,6 +475,13 @@ func assign(v *Var) Stmt {
 }
 
 func stmt() Stmt {
+	// Standard libraries.
+	tok := consumeToken(TK_LIBS)
+	if tok != nil {
+		assert("(")
+		return &Stdlib{tok.str, funcArgs()}
+	}
+
 	// Var declaration.
 	if consume("var") {
 		v := varSpec()

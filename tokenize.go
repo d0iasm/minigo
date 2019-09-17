@@ -17,6 +17,7 @@ const (
 	TK_TYPE                      // Types
 	TK_NUM                       // Integer literals
 	TK_STRING                    // String literals
+	TK_LIBS                      // Call standard libraies
 )
 
 type Token struct {
@@ -56,7 +57,7 @@ func isAlnum(b byte) bool {
 	return isNum(b) || isAlpha(b)
 }
 
-func startsReserved() string {
+func startReserved() string {
 	keywords := []string{"return", "if", "else", "for", "func", "var", "package"}
 	for _, kw := range keywords {
 		if strings.HasPrefix(in, kw) {
@@ -79,7 +80,19 @@ func startsReserved() string {
 	return ""
 }
 
-func startsType() string {
+func startLib() string {
+	stdlibs := []string{"println"}
+	for _, lib := range stdlibs {
+		if strings.HasPrefix(in, lib) {
+			if len(lib) == len(in) || !isAlnum(in[len(lib)]) {
+				return lib
+			}
+		}
+	}
+	return ""
+}
+
+func startType() string {
 	typeStrs := []string{"bool", "int32", "int64", "string"}
 	for _, t := range typeStrs {
 		if strings.HasPrefix(in, t) {
@@ -146,13 +159,19 @@ func tokenize() []Token {
 			_ = readLine()
 			continue
 		}
-		ty := startsType()
+		lib := startLib()
+		if len(lib) != 0 {
+			tokens = append(tokens, Token{TK_LIBS, -1, lib})
+			in = in[len(lib):]
+			continue
+		}
+		ty := startType()
 		if len(ty) != 0 {
 			tokens = append(tokens, Token{TK_TYPE, -1, ty})
 			in = in[len(ty):]
 			continue
 		}
-		kw := startsReserved()
+		kw := startReserved()
 		if len(kw) != 0 {
 			tokens = append(tokens, Token{TK_RESERVED, -1, kw})
 			in = in[len(kw):]

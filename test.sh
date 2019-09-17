@@ -12,8 +12,8 @@ assert() {
   expected="$1"
   input="$2"
 
-  go build main.go tokenize.go parse.go codegen.go type.go debug.go
-  ./main -in "$input" > tmp.s
+  go build -o minigo main.go tokenize.go parse.go codegen.go type.go debug.go
+  ./minigo -in "$input" > tmp.s
   gcc -static -o tmp tmp.s tmp2.o
   ./tmp
   actual="$?"
@@ -197,5 +197,10 @@ assert 3 'package main; func main() { var x [2][2]int64; x[1][1]=3; return x[1][
 assert 99 'package main; func main() { var hoge [2]string; hoge[1]="abc"; return hoge[1][2]; }'
 # TODO: Support initialization for multi-dimentional arrays.
 #assert 3 'package main; func main() { var x [2][2]int64=[2][2]int64{{1,2}, {3,4}}; return x[1][1]; }'
+
+echo
+echo 'standard libraries'
+echo
+assert 0 'package main; func main() { println("aa"); return 0; }'
 
 echo OK
