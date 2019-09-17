@@ -56,7 +56,7 @@ func genAddr(node interface{}) {
 
 func load(ty *Type) {
 	fmt.Printf("  pop rax\n")
-	if ty.kind == TY_STRING {
+	if ty.kind == TY_INT8 {
 		fmt.Printf("  movzx rax, byte ptr [rax]\n")
 	} else {
 		fmt.Printf("  mov rax, [rax]\n")
@@ -115,7 +115,7 @@ func gen(node interface{}) {
 		return
 	case *ArrayRef:
 		genAddr(n)
-		load(n.lhs.getType())
+		load(n.getType())
 		return
 	case *Block:
 		for _, c := range n.children {
@@ -282,7 +282,7 @@ func emitStdlibs() {
 	fmt.Printf("  call write\n")
 
 	// Newline.
-	fmt.Printf("  mov rdi,  '\\n'\n")
+	fmt.Printf("  mov rdi, '\\n'\n")
 	fmt.Printf("  call putchar\n")
 
 	// Epilogue.

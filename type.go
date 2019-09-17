@@ -9,6 +9,7 @@ type TypeKind int
 const (
 	TY_NONE TypeKind = iota
 	TY_BOOL
+	TY_INT8
 	TY_INT32
 	TY_INT64
 	TY_STRING
@@ -29,6 +30,8 @@ func typeKind(s string) TypeKind {
 	switch s {
 	case "bool":
 		return TY_BOOL
+	case "int8":
+		return TY_INT8
 	case "int32":
 		return TY_INT32
 	case "int64":
@@ -47,6 +50,8 @@ func typeKind(s string) TypeKind {
 func typeSize(k TypeKind) int {
 	switch k {
 	case TY_BOOL:
+		return 1
+	case TY_INT8:
 		return 1
 	case TY_INT32:
 		return 8
@@ -151,6 +156,9 @@ func addType(node interface{}) {
 		if n.lhs.getType().kind == TY_ARRAY {
 			ty := n.lhs.getType()
 			n.setType(ty.base)
+		} else {
+			ty := newLiteralType("int8")
+			n.setType(&ty)
 		}
 	case *FuncCall:
 		for _, arg := range n.args {

@@ -202,5 +202,6 @@ echo
 echo 'standard libraries'
 echo
 assert 0 'package main; func main() { println("aa"); return 0; }'
+assert 0 'package main; func main() { a:="abc"; println(a); return 0; }'
 
 echo OK
