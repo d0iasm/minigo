@@ -57,13 +57,21 @@ func genAddr(node interface{}) {
 }
 
 func load(ty *Type) {
-	fmt.Printf("  pop rax\n")
 	if ty.kind == TY_INT8 {
+		fmt.Printf("  pop rax\n")
 		fmt.Printf("  movzx rax, byte ptr [rax]\n")
+		fmt.Printf("  push rax\n")
+	} else if ty.kind == TY_STRING {
+		fmt.Printf("  pop rax\n")
+		fmt.Printf("  mov rdi, [rax]\n")
+		fmt.Printf("  push rdi\n") // pointer to string
+		fmt.Printf("  mov rdi, [rax+8]\n")
+		fmt.Printf("  push rdi\n") // length of string
 	} else {
+		fmt.Printf("  pop rax\n")
 		fmt.Printf("  mov rax, [rax]\n")
+		fmt.Printf("  push rax\n")
 	}
-	fmt.Printf("  push rax\n")
 }
 
 func store(ty *Type) {
@@ -284,10 +292,10 @@ func emitStdlibs() {
 	fmt.Printf("  push rbp\n")
 	fmt.Printf("  mov rbp, rsp\n")
 
-	fmt.Printf("  mov rsi, [rbp+16]\n")
-	fmt.Printf("  mov rdx, [rsi+8]\n") // third arg: size_t count
-	fmt.Printf("  mov rsi, [rsi]\n")   // second arg: const void *buf
-	fmt.Printf("  mov rdi, 1\n")       // first arg: int fd
+	//fmt.Printf("  mov rsi, [rbp+16]\n")
+	fmt.Printf("  mov rdx, [rbp+16]\n") // third arg: size_t count
+	fmt.Printf("  mov rsi, [rbp+24]\n") // second arg: const void *buf
+	fmt.Printf("  mov rdi, 1\n")        // first arg: int fd
 
 	fmt.Printf("  call write\n")
 
