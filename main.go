@@ -57,6 +57,7 @@ func main() {
 		for _, s := range fn.stmts {
 			addType(s)
 		}
+		fn.stackSize = stackSize(fn.locals)
 	}
 
 	// debug

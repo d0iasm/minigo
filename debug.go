@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func printNodes(funcs []Function) {
+func printNodes(funcs []*Function) {
 	for i, f := range funcs {
 		fmt.Println("")
 		fmt.Println("[Function]", i, f.name)

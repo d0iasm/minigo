@@ -109,6 +109,14 @@ func fillSize(ty *Type) {
 	ty.size = ty.aryLen * ty.base.size
 }
 
+func stackSize(locals []*Var) int {
+	size := 0
+	for _, l := range locals {
+		size += l.ty.size
+	}
+	return size
+}
+
 func resetOffset() {
 	varOffset = 8
 }

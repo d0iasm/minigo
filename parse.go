@@ -7,7 +7,7 @@ import (
 var globals []*Var
 var tmpLocals []*Var
 
-var contents []StringLit
+var contents []*StringLit
 var contentCnt = 0
 
 // -------------------- Interfaces --------------------
@@ -31,8 +31,8 @@ type Expr interface {
 // -------------------- Top level program --------------------
 type Program struct {
 	globals  []*Var
-	contents []StringLit
-	funcs    []Function
+	contents []*StringLit
+	funcs    []*Function
 }
 
 // -------------------- Declarations --------------------
@@ -367,10 +367,10 @@ func program() (Program, string) {
 	pkgName := tok.str
 	consume(";")
 
-	funcs := make([]Function, 0)
+	funcs := make([]*Function, 0)
 
 	preStmts := make([]Stmt, 0)
-	funcs = append(funcs, Function{"preMain", []*Var{}, []*Var{}, nil, 8})
+	funcs = append(funcs, &Function{"preMain", []*Var{}, []*Var{}, nil, 8})
 	for len(tokens) > 0 {
 		if consume("func") {
 			funcs = append(funcs, function())
@@ -404,15 +404,7 @@ func program() (Program, string) {
 	return Program{globals, contents, funcs}, pkgName
 }
 
-func stackSize(locals []*Var) int {
-	size := 0
-	for _, l := range locals {
-		size += l.ty.size
-	}
-	return size
-}
-
-func function() Function {
+func function() *Function {
 	// Initialize for a function.
 	tmpLocals = make([]*Var, 0)
 
@@ -430,7 +422,7 @@ func function() Function {
 		s := stmt()
 		stmts = append(stmts, s)
 	}
-	return Function{name, params, tmpLocals, stmts, stackSize(tmpLocals)}
+	return &Function{name, params, tmpLocals, stmts, 0}
 }
 
 func assign(v *Var) Stmt {
@@ -721,7 +713,7 @@ func literal() Expr {
 	if consume("\"") {
 		ty := newLiteralType("string")
 		n := StringLit{tokens[0].str, newLabel(), &ty}
-		contents = append(contents, n)
+		contents = append(contents, &n)
 		tokens = tokens[1:]
 		assert("\"")
 		return &n
