@@ -72,15 +72,12 @@ func store(ty *Type) {
 		fmt.Printf("  pop rdi\n")
 		fmt.Printf("  pop rax\n")
 		fmt.Printf("  mov [rax], rdi\n")
-		fmt.Printf("  mov [rax-8], rsi\n")
-		fmt.Printf("  push rax\n") // for alignment push&pop
-		fmt.Printf("  push rdi\n") // for alignment push&pop
+		fmt.Printf("  mov [rax+8], rsi\n")
 		return
 	}
 	fmt.Printf("  pop rdi\n")
 	fmt.Printf("  pop rax\n")
 	fmt.Printf("  mov [rax], rdi\n")
-	fmt.Printf("  push rdi\n") // for alignment push&pop
 }
 
 func isEmpty(node interface{}) bool {
@@ -268,7 +265,7 @@ func emitData(prog Program) {
 
 	for _, g := range prog.globals {
 		fmt.Printf("%s:\n", g.name)
-		fmt.Printf("  .zero %d\n", g.ty.aryLen*8)
+		fmt.Printf("  .zero %d\n", g.ty.aryLen*g.ty.size)
 	}
 
 	for _, c := range prog.contents {

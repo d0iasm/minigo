@@ -118,12 +118,12 @@ func stackSize(locals []*Var) int {
 }
 
 func resetOffset() {
-	varOffset = 8
+	varOffset = 0
 }
 
 func fillOffset(v *Var) {
-	v.offset = varOffset
 	varOffset += v.ty.size
+	v.offset = varOffset
 }
 
 func addType(node interface{}) {
