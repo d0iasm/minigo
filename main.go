@@ -42,17 +42,30 @@ func parseArgs() {
 func main() {
 	parseArgs()
 
+	// tokenize
 	tokens = tokenize()
 	if isDev {
 		fmt.Println(tokens)
 	}
 
+	// parse
 	prog, pkg := program()
+
+	// type
+	for _, fn := range prog.funcs {
+		resetOffset()
+		for _, s := range fn.stmts {
+			addType(s)
+		}
+	}
+
+	// debug
 	if isDev {
 		fmt.Println("package name:", pkg)
 		printNodes(prog.funcs)
 	}
 
+	// codegen
 	codegen(prog)
 	return
 }

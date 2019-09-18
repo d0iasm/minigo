@@ -6,7 +6,6 @@ import (
 
 var globals []*Var
 var tmpLocals []*Var
-var varOffset int = 8
 
 var contents []StringLit
 var contentCnt = 0
@@ -251,7 +250,7 @@ func varSpec() *Var {
 	ty := readTypePrefix(&tmp)
 	ty = tmp.base
 
-	return &Var{tokId.str, varOffset, true, ty}
+	return &Var{tokId.str, 0, true, ty}
 }
 
 func consume(op string) bool {
@@ -318,7 +317,6 @@ func funcParams() []*Var {
 	for {
 		v := varSpec()
 
-		varOffset += (v.ty.aryLen * 8)
 		tmpLocals = append(tmpLocals, v)
 		params = append(params, v)
 
@@ -402,9 +400,6 @@ func program() (Program, string) {
 	}
 	ty := newLiteralType("int64")
 	preStmts = append(preStmts, &Return{&IntLit{0, &ty}})
-	for _, s := range preStmts {
-		addType(s)
-	}
 	funcs[0].stmts = preStmts
 	return Program{globals, contents, funcs}, pkgName
 }
@@ -419,7 +414,6 @@ func stackSize(locals []*Var) int {
 
 func function() Function {
 	// Initialize for a function.
-	varOffset = 8
 	tmpLocals = make([]*Var, 0)
 
 	tok := consumeToken(TK_IDENT)
@@ -434,7 +428,6 @@ func function() Function {
 	stmts := make([]Stmt, 0)
 	for len(tokens) > 0 && !next("func") {
 		s := stmt()
-		addType(s)
 		stmts = append(stmts, s)
 	}
 	return Function{name, params, tmpLocals, stmts, stackSize(tmpLocals)}
@@ -452,9 +445,6 @@ func assign(v *Var) Stmt {
 	tystr := assertType()
 	assert("{")
 	ty := newNoneType()
-	if v.isLocal {
-		varOffset += ((v.ty.aryLen - 1) * 8)
-	}
 
 	// Type inference `:=`.
 	if v.ty.kind == TY_NONE {
@@ -491,8 +481,6 @@ func stmt() Stmt {
 			panic(fmt.Sprintf("%s is already declared. No new variables\n", v.name))
 		}
 
-		//varOffset += (v.ty.aryLen * v.ty.size)
-		varOffset += (v.ty.aryLen * 8)
 		tmpLocals = append(tmpLocals, v)
 
 		if consume("=") {
@@ -559,7 +547,6 @@ func simpleStmt(exprN Expr) Stmt {
 			panic(fmt.Sprintf("%s is already declared. No new variables on left side of := \n", v.name))
 		}
 
-		varOffset += (v.ty.aryLen * 8)
 		tmpLocals = append(tmpLocals, v)
 		return assign(v)
 	}
@@ -721,7 +708,7 @@ func operand() Expr {
 
 		// Normal variable.
 		if varp == nil {
-			a := Var{tok.str, varOffset, true, &nty}
+			a := Var{tok.str, 0, true, &nty}
 			return &a
 		}
 		return varp

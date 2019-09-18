@@ -6,6 +6,8 @@ import (
 
 type TypeKind int
 
+var varOffset int = 8
+
 const (
 	TY_NONE TypeKind = iota
 	TY_BOOL
@@ -60,7 +62,7 @@ func typeSize(k TypeKind) int {
 	case TY_INT64:
 		return 8
 	case TY_STRING:
-		return 8
+		return 16
 	case TY_PTR:
 		return 8
 	case TY_ARRAY:
@@ -107,6 +109,15 @@ func fillSize(ty *Type) {
 	ty.size = ty.aryLen * ty.base.size
 }
 
+func resetOffset() {
+	varOffset = 8
+}
+
+func fillOffset(v *Var) {
+	v.offset = varOffset
+	varOffset += v.ty.size
+}
+
 func addType(node interface{}) {
 	switch n := node.(type) {
 	// Expressions. It should have Type field.
@@ -149,6 +160,10 @@ func addType(node interface{}) {
 		// Types except array are defined at Assgin node.
 		if n.ty.kind == TY_ARRAY {
 			fillSize(n.ty)
+		}
+		// allocate offset to local varialbes which already has type.
+		if n.ty.kind != TY_NONE && n.offset == 0 {
+			fillOffset(n)
 		}
 	case *ArrayRef:
 		addType(n.lhs)
@@ -206,6 +221,14 @@ func addType(node interface{}) {
 			}
 			if n.rvals[i].getType().kind == TY_NONE {
 				n.rvals[i].setType(n.lvals[i].getType())
+			}
+
+			// allocate offset to local variables which is assigned a specific type just above.
+			switch lhs := n.lvals[i].(type) {
+			case *Var:
+				if lhs.offset == 0 {
+					fillOffset(lhs)
+				}
 			}
 		}
 	case *Stdlib:
