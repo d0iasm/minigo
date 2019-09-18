@@ -52,6 +52,9 @@ func main() {
 	prog, pkg := program()
 
 	// type
+	for _, gv := range prog.globals {
+		addType(gv)
+	}
 	for _, fn := range prog.funcs {
 		resetOffset()
 		for _, s := range fn.stmts {
