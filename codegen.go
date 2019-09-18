@@ -28,12 +28,14 @@ func genAddr(node interface{}) {
 		gen(n.child)
 		return
 	case *ArrayRef:
-		if n.lhs.getType().kind != TY_STRING {
+		if n.lhs.getType().kind == TY_STRING {
 			genAddr(n.lhs)
 			gen(n.rhs)
-			fmt.Printf("  pop rdi\n") // index stored in right-side node.
-			fmt.Printf("  pop rax\n") // address stored in left-size node.
-			fmt.Printf("  imul rdi, %d\n", n.ty.size)
+			// index stored in right-size node.
+			fmt.Printf("  pop rdi\n")
+			// pointer to string object stored in left-size node.
+			fmt.Printf("  pop rax\n")
+			fmt.Printf("  mov rax, [rax]\n")
 			fmt.Printf("  add rax, rdi\n")
 			fmt.Printf("  push rax\n")
 			return
@@ -41,9 +43,9 @@ func genAddr(node interface{}) {
 
 		genAddr(n.lhs)
 		gen(n.rhs)
-		fmt.Printf("  pop rdi\n") // index stored in right-size node.
-		fmt.Printf("  pop rax\n") // pointer to string object stored in left-size node.
-		fmt.Printf("  mov rax, [rax]\n")
+		fmt.Printf("  pop rdi\n") // index stored in right-side node.
+		fmt.Printf("  pop rax\n") // address stored in left-size node.
+		fmt.Printf("  imul rdi, %d\n", n.ty.size)
 		fmt.Printf("  add rax, rdi\n")
 		fmt.Printf("  push rax\n")
 		return
@@ -64,11 +66,21 @@ func load(ty *Type) {
 	fmt.Printf("  push rax\n")
 }
 
-func store() {
+func store(ty *Type) {
+	if ty.kind == TY_STRING {
+		fmt.Printf("  pop rsi\n")
+		fmt.Printf("  pop rdi\n")
+		fmt.Printf("  pop rax\n")
+		fmt.Printf("  mov [rax], rdi\n")
+		fmt.Printf("  mov [rax-8], rsi\n")
+		fmt.Printf("  push rax\n") // for alignment push&pop
+		fmt.Printf("  push rdi\n") // for alignment push&pop
+		return
+	}
 	fmt.Printf("  pop rdi\n")
 	fmt.Printf("  pop rax\n")
 	fmt.Printf("  mov [rax], rdi\n")
-	fmt.Printf("  push rdi\n")
+	fmt.Printf("  push rdi\n") // for alignment push&pop
 }
 
 func isEmpty(node interface{}) bool {
@@ -90,7 +102,8 @@ func gen(node interface{}) {
 		fmt.Printf("  push %d\n", n.val)
 		return
 	case *StringLit:
-		fmt.Printf("  push offset %s.obj\n", n.label)
+		fmt.Printf("  push offset %s\n", n.label)
+		fmt.Printf("  push %d\n", len(n.val))
 		return
 	case *Var:
 		genAddr(n)
@@ -103,7 +116,7 @@ func gen(node interface{}) {
 		for i := range n.lvals {
 			genAddr(n.lvals[i])
 			gen(n.rvals[i])
-			store()
+			store(n.lvals[i].getType())
 		}
 		return
 	case *Addr:
@@ -115,7 +128,7 @@ func gen(node interface{}) {
 		return
 	case *ArrayRef:
 		genAddr(n)
-		load(n.getType())
+		load(n.ty)
 		return
 	case *Block:
 		for _, c := range n.children {
@@ -275,9 +288,9 @@ func emitStdlibs() {
 	fmt.Printf("  mov rbp, rsp\n")
 
 	fmt.Printf("  mov rsi, [rbp+16]\n")
-	fmt.Printf("  mov rdx, [rsi+8]\n")
-	fmt.Printf("  mov rsi, [rsi]\n")
-	fmt.Printf("  mov rdi, 1\n")
+	fmt.Printf("  mov rdx, [rsi+8]\n") // third arg: size_t count
+	fmt.Printf("  mov rsi, [rsi]\n")   // second arg: const void *buf
+	fmt.Printf("  mov rdi, 1\n")       // first arg: int fd
 
 	fmt.Printf("  call write\n")
 
