@@ -426,8 +426,6 @@ func function() *Function {
 }
 
 func assign(v *Var) Stmt {
-	//lvals := readVarSuffix(v)
-
 	length := arrayLength()
 	if length == -1 {
 		return &Assign{[]Expr{v}, []Expr{expr()}}

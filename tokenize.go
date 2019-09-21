@@ -93,7 +93,7 @@ func startLib() string {
 }
 
 func startType() string {
-	typeStrs := []string{"bool", "int32", "int64", "string"}
+	typeStrs := []string{"bool", "int", "int8" "int32", "int64", "string"}
 	for _, t := range typeStrs {
 		if strings.HasPrefix(in, t) {
 			if len(t) == len(in) || !isAlnum(in[len(t)]) {

@@ -11,6 +11,7 @@ var varOffset int = 8
 const (
 	TY_NONE TypeKind = iota
 	TY_BOOL
+	TY_INT
 	TY_INT8
 	TY_INT32
 	TY_INT64
@@ -36,7 +37,7 @@ func typeKind(s string) TypeKind {
 		return TY_INT8
 	case "int32":
 		return TY_INT32
-	case "int64":
+	case "int64", "int":
 		return TY_INT64
 	case "string":
 		return TY_STRING
@@ -59,7 +60,7 @@ func typeSize(k TypeKind) int {
 		return 8
 		// TODO: varOffset sets depending on type's size.
 		//return 4
-	case TY_INT64:
+	case TY_INT64, TY_INT:
 		return 8
 	case TY_STRING:
 		return 16

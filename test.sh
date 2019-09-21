@@ -115,6 +115,7 @@ assert 3 'package main; func main() { return ret3(); }'
 assert 5 'package main; func main() { return ret5(); }'
 assert 8 'package main; func main() { return add(3, 5); }'
 assert 2 'package main; func main() { return sub(5, 3); }'
+assert 2 'package main; func sub2(a int64, b int64) { return a-b; } func main() { return sub2(5, 3); }'
 assert 21 'package main; func main() { return add6(1,2,3,4,5,6); }'
 
 assert 32 'package main; func main() { return ret32(); } func ret32() { return 32; }'
