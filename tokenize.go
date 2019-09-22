@@ -93,7 +93,7 @@ func startLib() string {
 }
 
 func startType() string {
-	typeStrs := []string{"bool", "int", "int8" "int32", "int64", "string"}
+	typeStrs := []string{"bool", "int", "int8", "int32", "int64", "string"}
 	for _, t := range typeStrs {
 		if strings.HasPrefix(in, t) {
 			if len(t) == len(in) || !isAlnum(in[len(t)]) {
@@ -131,6 +131,18 @@ func readLine() string {
 	return str
 }
 
+func readUntil(s string) string {
+	str := ""
+	for in[0:1] != s {
+		str += in[0:1]
+		in = in[1:]
+		if in[0:1] == "\n" {
+			panic("expected end of string '\"' but got \\n")
+		}
+	}
+	return str
+}
+
 func readChunk() string {
 	str := in[0:1]
 	in = in[1:]
@@ -159,27 +171,31 @@ func tokenize() []Token {
 			_ = readLine()
 			continue
 		}
+
 		lib := startLib()
 		if len(lib) != 0 {
 			tokens = append(tokens, Token{TK_LIBS, -1, lib})
 			in = in[len(lib):]
 			continue
 		}
+
 		ty := startType()
 		if len(ty) != 0 {
 			tokens = append(tokens, Token{TK_TYPE, -1, ty})
 			in = in[len(ty):]
 			continue
 		}
+
 		kw := startReserved()
 		if len(kw) != 0 {
 			tokens = append(tokens, Token{TK_RESERVED, -1, kw})
 			in = in[len(kw):]
 			continue
 		}
+
 		if isAlpha(in[0]) {
+			// Character.
 			if tokens[len(tokens)-1].str == "'" {
-				// Character.
 				tokens = append(tokens, Token{TK_NUM, int(in[0]), in[0:1]})
 				in = in[1:]
 				if in[0] != '\'' {
@@ -188,16 +204,18 @@ func tokenize() []Token {
 				continue
 			}
 
-			str := readChunk()
+			// String.
 			if tokens[len(tokens)-1].str == "\"" {
-				// String.
+				str := readUntil("\"")
 				tokens = append(tokens, Token{TK_STRING, -1, str})
-			} else {
-				// Variable.
-				tokens = append(tokens, Token{TK_IDENT, -1, str})
 			}
+
+			// Variable.
+			str := readChunk()
+			tokens = append(tokens, Token{TK_IDENT, -1, str})
 			continue
 		}
+
 		if isNum(in[0]) {
 			tokens = append(tokens, Token{TK_NUM, getNum(), ""})
 			continue
