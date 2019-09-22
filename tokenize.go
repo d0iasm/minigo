@@ -74,7 +74,7 @@ func startReserved() string {
 		}
 	}
 
-	if strings.Contains("+-*/()<>;={},&[]'\"", in[0:1]) {
+	if strings.Contains("+-*/()<>;={},&[]'", in[0:1]) {
 		return in[0:1]
 	}
 	return ""
@@ -193,6 +193,17 @@ func tokenize() []Token {
 			continue
 		}
 
+		// String.
+		if in[0:1] == "\"" {
+			tokens = append(tokens, Token{TK_RESERVED, -1, "\""})
+			in = in[1:]
+			str := readUntil("\"")
+			tokens = append(tokens, Token{TK_STRING, -1, str})
+			tokens = append(tokens, Token{TK_RESERVED, -1, "\""})
+			in = in[1:]
+			continue
+		}
+
 		if isAlpha(in[0]) {
 			// Character.
 			if tokens[len(tokens)-1].str == "'" {
@@ -202,12 +213,6 @@ func tokenize() []Token {
 					panic("invalid character literal (more than one character)")
 				}
 				continue
-			}
-
-			// String.
-			if tokens[len(tokens)-1].str == "\"" {
-				str := readUntil("\"")
-				tokens = append(tokens, Token{TK_STRING, -1, str})
 			}
 
 			// Variable.
